@@ -3,36 +3,29 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { GlobalStyles } from './styles/GlobalStyles';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DataProvider } from './contexts/DataContext';
 import Layout from './components/layout/Layout';
+import InitialLoading from './components/InitialLoading';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import Incomes from './pages/Incomes';
 import CreditCards from './pages/CreditCards';
+import CreditCardsDashboard from './pages/CreditCardsDashboard';
 import BankAccounts from './pages/BankAccounts';
 import Categories from './pages/Categories';
 import Calendar from './pages/Calendar';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import Transfers from './pages/Transfers';
 
 // Componente para rotas protegidas
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '1.2rem',
-        color: 'var(--text-secondary)'
-      }}>
-        Carregando...
-      </div>
-    );
+    return <InitialLoading />;
   }
 
   if (!user) {
@@ -85,6 +78,14 @@ const AppContent: React.FC = () => {
           </ProtectedRoute>
         } />
         
+        <Route path="/credit-cards-dashboard" element={
+          <ProtectedRoute>
+            <Layout>
+              <CreditCardsDashboard />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        
         <Route path="/bank-accounts" element={
           <ProtectedRoute>
             <Layout>
@@ -101,6 +102,13 @@ const AppContent: React.FC = () => {
           </ProtectedRoute>
         } />
         
+        <Route path="/transfers" element={
+          <ProtectedRoute>
+            <Layout>
+              <Transfers />
+            </Layout>
+          </ProtectedRoute>
+        } />
         
         <Route path="/calendar" element={
           <ProtectedRoute>
@@ -162,7 +170,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
     </AuthProvider>
   );
 };

@@ -73,7 +73,7 @@ const SearchInput = styled.input`
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-lg);
   background-color: var(--gray-50);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   transition: all 0.2s ease;
   
   &:focus {
@@ -159,8 +159,8 @@ const UserAvatar = styled.div`
   align-items: center;
   justify-content: center;
   color: var(--white);
-  font-weight: 600;
-  font-size: 0.75rem;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
 `;
 
 const UserInfo = styled.div`
@@ -174,13 +174,13 @@ const UserInfo = styled.div`
 `;
 
 const UserName = styled.span`
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
 `;
 
 const UserRole = styled.span`
-  font-size: 0.65rem;
+  font-size: var(--font-size-xs);
   color: var(--text-tertiary);
   text-transform: capitalize;
 `;
@@ -213,7 +213,7 @@ const DropdownItem = styled.button`
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--text-primary);
   
   &:hover {

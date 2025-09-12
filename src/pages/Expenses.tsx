@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useOptimizedData } from '../hooks/useOptimizedData';
 import styled from 'styled-components';
 import { FiPlus, FiSearch, FiEye, FiEdit, FiTrash2 } from 'react-icons/fi';
-import { expenseService, categoryService, subcategoryService, bankAccountService } from '../services/api';
-import { Expense, Category, Subcategory, BankAccount } from '../types';
+import { expenseService } from '../services/api';
+import { Expense } from '../types';
 import Button from '../components/common/Button';
 import { Input, Select, TextArea } from '../components/common/Input';
 import { GlobalLoading } from '../components/GlobalLoading';
+import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
 
 const ExpensesContainer = styled.div`
@@ -413,24 +413,31 @@ const DashboardSection = styled.div`
 `;
 
 const DashboardCard = styled.div`
-  background-color: var(--white);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
   border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
   text-align: center;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
 `;
 
 const DashboardTitle = styled.h3`
-  margin: 0 0 var(--spacing-sm) 0;
-  font-size: 0.9rem;
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 500;
 `;
 
 const DashboardValue = styled.div<{ variant?: 'success' | 'warning' | 'info' }>`
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: var(--spacing-xs);
   color: ${(props: any) => {
     switch (props.variant) {
       case 'success': return 'var(--success-color)';
@@ -439,12 +446,12 @@ const DashboardValue = styled.div<{ variant?: 'success' | 'warning' | 'info' }>`
       default: return 'var(--text-primary)';
     }
   }};
-  margin-bottom: var(--spacing-xs);
 `;
 
 const DashboardSubtitle = styled.div`
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
+  font-weight: 500;
 `;
 
 const FiltersRow = styled.div`
@@ -496,13 +503,20 @@ const InfoValue = styled.div`
 `;
 
 const Expenses: React.FC = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [allSubcategories, setAllSubcategories] = useState<Subcategory[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  // Usar dados do contexto global
+  const { 
+    expenses, 
+    categories, 
+    subcategories, 
+    bankAccounts, 
+    isLoading: globalLoading,
+    addExpense,
+    updateExpense,
+    removeExpense,
+    refreshExpenses
+  } = useData();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -523,7 +537,7 @@ const Expenses: React.FC = () => {
   const [formData, setFormData] = useState<ExpenseFormData>({
     description: '',
     amount: '',
-    dueDate: '',
+    dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
     categoryId: '',
     subcategoryId: '',
     tags: '',
@@ -533,145 +547,35 @@ const Expenses: React.FC = () => {
     bankAccountId: ''
   });
 
-  // Carregar despesas, categorias e todas as subcategorias
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Carregar despesas (excluindo despesas de cartão de crédito)
-        const expensesResponse = await expenseService.getExpenses({ excludeCreditCard: true });
-        const allExpenses = expensesResponse.data.expenses || [];
-        
-        // Log para debug das despesas carregadas
-        console.log('📦 Despesas carregadas da API:', allExpenses);
-        console.log('🔍 Verificando campo bankAccountId nas despesas:');
-        allExpenses.forEach((expense: Expense, index: number) => {
-          console.log(`  Despesa ${index + 1}:`, {
-            id: expense.id,
-            description: expense.description,
-            bankAccountId: expense.bankAccountId,
-            hasBankAccount: !!expense.bankAccountId
-          });
-        });
-        
-        // 🚫 VERIFICAÇÃO CRÍTICA: Garantir que NENHUMA despesa de cartão venha da API
-        const creditCardExpensesInAPI = allExpenses.filter((e: Expense) => e.isCreditCard === true || e.creditCardId);
-        if (creditCardExpensesInAPI.length > 0) {
-          console.error('🚨🚨🚨 ERRO CRÍTICO: API retornou despesas de cartão mesmo com excludeCreditCard: true!', creditCardExpensesInAPI);
-          console.error('🚨🚨🚨 Isso NÃO deve acontecer! Despesas de cartão devem ficar APENAS na tela de cartões!');
-          
-          // Filtrar manualmente para garantir a separação TOTAL
-          const normalExpensesOnly = allExpenses.filter((e: Expense) => !e.isCreditCard && !e.creditCardId);
-          console.log('🔧 Filtrando manualmente, removendo', creditCardExpensesInAPI.length, 'despesas de cartão');
-          setExpenses(normalExpensesOnly);
-        } else {
-          console.log('✅✅✅ PERFEITO: API não retornou despesas de cartão');
-          setExpenses(allExpenses);
-        }
-        
-        console.log('📦 Despesas normais carregadas:', allExpenses.length);
-        console.log('✅✅✅ SEPARAÇÃO TOTAL GARANTIDA: Nenhuma despesa de cartão na tela de despesas');
-        
-        // Carregar categorias de despesas
-        const categoriesResponse = await categoryService.getCategories('expense');
-        const categoriesData = categoriesResponse.data.categories || [];
-        setCategories(categoriesData);
-        
-        
-        
-        // Carregar todas as subcategorias de todas as categorias
-        const allSubcategoriesData: Subcategory[] = [];
-        for (const category of categoriesData) {
-          try {
-            const subcategoriesResponse = await subcategoryService.getSubcategories(category.id);
-            const categorySubcategories = subcategoriesResponse.data.subcategories || [];
-            allSubcategoriesData.push(...categorySubcategories);
-      } catch (error) {
-            console.error(`Erro ao carregar subcategorias da categoria ${category.id}:`, error);
-          }
-        }
-        setAllSubcategories(allSubcategoriesData);
-        
-        // Carregar contas bancárias
-        try {
-          console.log('🔍 Carregando contas bancárias...');
-          const bankAccountsResponse = await bankAccountService.getBankAccounts();
-          console.log('📦 Resposta completa da API:', bankAccountsResponse);
-          
-          // A API retorna os dados em response.data.data.bankAccounts
-          const bankAccountsData = bankAccountsResponse.data?.bankAccounts || [];
-          console.log('📦 Contas bancárias extraídas:', bankAccountsData);
-          setBankAccounts(bankAccountsData);
-        } catch (error) {
-          console.error('❌ Erro ao carregar contas bancárias:', error);
-          setBankAccounts([]);
-        }
-        
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-        toast.error('Erro ao carregar dados');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Filtrar despesas para excluir despesas de cartão de crédito
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(expense => !expense.isCreditCard && !expense.creditCardId);
+  }, [expenses]);
 
-    fetchData();
-  }, []);
+  // Filtrar categorias para mostrar apenas categorias de despesas
+  const expenseCategories = useMemo(() => {
+    return categories.filter(category => category.type === 'expense');
+  }, [categories]);
 
-  // Monitorar mudanças no estado bankAccounts para debug
-  useEffect(() => {
-    console.log('🔄 Estado bankAccounts mudou:', bankAccounts);
-  }, [bankAccounts]);
+  // Filtrar subcategorias baseado na categoria selecionada
+  const filteredSubcategories = useMemo(() => {
+    if (!formData.categoryId) return [];
+    return subcategories.filter(sub => sub.categoryId === formData.categoryId);
+  }, [subcategories, formData.categoryId]);
 
-  // Carregar subcategorias quando categoria for selecionada
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      if (formData.categoryId) {
-        try {
-          const response = await subcategoryService.getSubcategories(formData.categoryId);
-          setSubcategories(response.data.subcategories || []);
-        } catch (error) {
-          console.error('Erro ao carregar subcategorias:', error);
-          setSubcategories([]);
-        }
-      } else {
-        setSubcategories([]);
-      }
-    };
-
-    fetchSubcategories();
-  }, [formData.categoryId]);
-
-  const filteredExpenses: Expense[] = useMemo(() => {
-    return expenses.filter((expense: Expense) => {
-      // 🚫 FILTRO RIGOROSO: NUNCA mostrar despesas de cartão na tela de despesas
-      if (expense.isCreditCard === true || expense.creditCardId) {
-        console.log('🚫🚫🚫 DESPESA DE CARTÃO BLOQUEADA:', {
-          id: expense.id,
-          description: expense.description,
-          isCreditCard: expense.isCreditCard,
-          creditCardId: expense.creditCardId,
-          message: 'Esta despesa NUNCA deve aparecer na tela de despesas!'
-        });
-        return false;
-      }
-      
-      // Verificação adicional de segurança
-      if (typeof expense.isCreditCard === 'boolean' && expense.isCreditCard) {
-        console.log('🚫🚫🚫 DESPESA DE CARTÃO BLOQUEADA (verificação adicional):', expense.description);
-        return false;
-      }
-      
-      const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           expense.observations?.toLowerCase().includes(searchTerm.toLowerCase());
+  // Aplicar filtros de busca nas despesas já filtradas
+  const searchFilteredExpenses: Expense[] = useMemo(() => {
+    return filteredExpenses.filter((expense: Expense) => {
+      const matchesSearch = !searchTerm || 
+        expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        expense.observations?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesCategory = !selectedCategory || expense.categoryId === selectedCategory;
       
       const matchesStatus = !selectedStatus || 
         (selectedStatus === 'paid' && expense.isPaid) ||
-         (selectedStatus === 'partial' && expense.isPartial) ||
-         (selectedStatus === 'unpaid' && !expense.isPaid && !expense.isPartial);
+        (selectedStatus === 'partial' && expense.isPartial) ||
+        (selectedStatus === 'unpaid' && !expense.isPaid && !expense.isPartial);
       
       const matchesAmount = (!minAmount || expense.amount >= parseFloat(minAmount)) &&
                            (!maxAmount || expense.amount <= parseFloat(maxAmount));
@@ -693,11 +597,11 @@ const Expenses: React.FC = () => {
       console.error('🚨🚨🚨 ALERTA CRÍTICO: Despesas de cartão foram encontradas na tela de despesas!', creditCardExpensesFound);
     }
     
-    console.log('🔍 Despesas filtradas (apenas despesas normais):', filteredExpenses.length);
+    console.log('🔍 Despesas filtradas (apenas despesas normais):', searchFilteredExpenses.length);
     console.log('✅ Verificação: Nenhuma despesa de cartão deve aparecer aqui');
     
     return filteredExpenses;
-  }, [expenses, searchTerm, selectedCategory, selectedStatus, minAmount, maxAmount, dueDate]);
+  }, [filteredExpenses, searchTerm, selectedCategory, selectedStatus, minAmount, maxAmount, dueDate]);
 
   const formatCurrency = (value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
@@ -790,7 +694,7 @@ const Expenses: React.FC = () => {
         observations: formData.observations,
         isPaid: Boolean(formData.isPaid),
         paidDate: formData.isPaid ? adjustDateForTimezone(formData.paymentDate) : null,
-        bankAccountId: formData.bankAccountId || null,
+        bankAccountId: formData.bankAccountId && formData.bankAccountId !== '' ? formData.bankAccountId : null,
         // 🚫 GARANTIR que despesas criadas pela tela de despesas NUNCA sejam de cartão
         isCreditCard: false,
         creditCardId: null
@@ -808,17 +712,22 @@ const Expenses: React.FC = () => {
 
       if (editingExpense) {
         // Atualizar despesa existente
-        await expenseService.updateExpense(editingExpense.id, expenseData);
+        const response = await expenseService.updateExpense(editingExpense.id, expenseData);
         toast.success('Despesa atualizada com sucesso!');
+        
+        // Atualizar dados localmente com conta bancária atualizada
+        updateExpense(response.data.expense, response.data.updatedBankAccount);
       } else {
         // Criar nova despesa
-        await expenseService.createExpense(expenseData);
+        console.log('📝 Expenses: Criando nova despesa com dados:', expenseData);
+        const response = await expenseService.createExpense(expenseData);
+        console.log('📝 Expenses: Despesa criada com sucesso:', response.data.expense);
         toast.success('Despesa criada com sucesso!');
+        
+        // Atualizar dados localmente
+        console.log('🔄 Expenses: Chamando addExpense do DataContext...');
+        addExpense(response.data.expense);
       }
-      
-      // Recarregar despesas (excluindo despesas de cartão de crédito)
-      const response = await expenseService.getExpenses({ excludeCreditCard: true });
-      setExpenses(response.data.expenses || []);
       
       // Limpar formulário e fechar modal
       resetForm();
@@ -834,7 +743,7 @@ const Expenses: React.FC = () => {
     setFormData({
       description: '',
       amount: '',
-      dueDate: '',
+      dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
       categoryId: '',
       subcategoryId: '',
       tags: '',
@@ -934,9 +843,8 @@ const Expenses: React.FC = () => {
       try {
         await expenseService.deleteExpense(expense.id);
         
-        // Recarregar despesas (excluindo despesas de cartão de crédito)
-        const response = await expenseService.getExpenses({ excludeCreditCard: true });
-        setExpenses(response.data.expenses || []);
+        // Atualizar dados localmente
+        removeExpense(expense.id);
         
         toast.success('Despesa excluída com sucesso!');
       } catch (error) {
@@ -947,6 +855,14 @@ const Expenses: React.FC = () => {
   };
 
   const handleMarkAsPaid = async (expense: Expense) => {
+    console.log('💳 Expenses: handleMarkAsPaid chamado para:', {
+      id: expense.id,
+      description: expense.description,
+      amount: expense.amount,
+      isPaid: expense.isPaid,
+      bankAccountId: expense.bankAccountId
+    });
+    
     setPaymentExpense(expense);
     
     // Se já tem pagamento parcial, calcular o valor restante
@@ -1010,13 +926,28 @@ const Expenses: React.FC = () => {
         updateData.partialAmount = null;
       }
       
-      console.log('Enviando dados para atualização:', updateData);
+      console.log('📤 Expenses: Enviando dados para atualização:', updateData);
+      console.log('📤 Expenses: Despesa original:', {
+        id: paymentExpense.id,
+        description: paymentExpense.description,
+        amount: paymentExpense.amount,
+        isPaid: paymentExpense.isPaid,
+        bankAccountId: paymentExpense.bankAccountId
+      });
       
-      await expenseService.updateExpense(paymentExpense.id, updateData);
+      const response = await expenseService.updateExpense(paymentExpense.id, updateData);
       
-      // Recarregar despesas (excluindo despesas de cartão de crédito)
-      const response = await expenseService.getExpenses({ excludeCreditCard: true });
-      setExpenses(response.data.expenses || []);
+      console.log('📝 Expenses: Dados da despesa atualizada:', {
+        id: response.data.expense.id,
+        description: response.data.expense.description,
+        amount: response.data.expense.amount,
+        isPaid: response.data.expense.isPaid,
+        bankAccountId: response.data.expense.bankAccountId
+      });
+      
+      // Atualizar dados localmente
+      console.log('🔄 Expenses: Chamando updateExpense do DataContext...');
+      updateExpense(response.data.expense);
       
       // Fechar modal e limpar dados
       setIsPaymentModalOpen(false);
@@ -1053,7 +984,7 @@ const Expenses: React.FC = () => {
   const getSubcategoryName = (subcategoryId: string) => {
     if (!subcategoryId) return '';
     
-    const subcategory = allSubcategories.find(sub => sub.id === subcategoryId);
+    const subcategory = subcategories.find((sub: any) => sub.id === subcategoryId);
     return subcategory ? subcategory.name : '';
   };
 
@@ -1065,31 +996,31 @@ const Expenses: React.FC = () => {
 
   // Calcular totais baseados nos filtros aplicados
   const dashboardStats = useMemo(() => {
-    const totalExpenses = filteredExpenses.length;
-    const paidExpenses = filteredExpenses.filter((expense: Expense) => expense.isPaid).length;
-    const partialExpenses = filteredExpenses.filter((expense: Expense) => expense.isPartial).length;
-    const unpaidExpenses = filteredExpenses.filter((expense: Expense) => !expense.isPaid && !expense.isPartial).length;
+    const totalExpenses = searchFilteredExpenses.length;
+    const paidExpenses = searchFilteredExpenses.filter((expense: Expense) => expense.isPaid).length;
+    const partialExpenses = searchFilteredExpenses.filter((expense: Expense) => expense.isPartial).length;
+    const unpaidExpenses = searchFilteredExpenses.filter((expense: Expense) => !expense.isPaid && !expense.isPartial).length;
     
-    const totalAmount = filteredExpenses.reduce((sum: number, expense: Expense) => sum + expense.amount, 0);
+    const totalAmount = searchFilteredExpenses.reduce((sum: number, expense: Expense) => sum + expense.amount, 0);
     
     // Valor total pago: despesas totalmente pagas + valores parciais das despesas parciais
-    const paidAmount = filteredExpenses
+    const paidAmount = searchFilteredExpenses
       .filter((expense: Expense) => expense.isPaid)
       .reduce((sum: number, expense: Expense) => sum + expense.amount, 0) +
-      filteredExpenses
+      searchFilteredExpenses
         .filter((expense: Expense) => expense.isPartial)
         .reduce((sum: number, expense: Expense) => sum + (expense.partialAmount || 0), 0);
     
     // Valor total em pagamentos parciais
-    const partialAmount = filteredExpenses
+    const partialAmount = searchFilteredExpenses
       .filter((expense: Expense) => expense.isPartial)
       .reduce((sum: number, expense: Expense) => sum + (expense.partialAmount || 0), 0);
     
     // Valor total pendente: despesas não pagas + valores restantes das despesas parciais
-    const unpaidAmount = filteredExpenses
+    const unpaidAmount = searchFilteredExpenses
       .filter((expense: Expense) => !expense.isPaid && !expense.isPartial)
       .reduce((sum: number, expense: Expense) => sum + expense.amount, 0) +
-      filteredExpenses
+      searchFilteredExpenses
         .filter((expense: Expense) => expense.isPartial)
         .reduce((sum: number, expense: Expense) => sum + (expense.amount - (expense.partialAmount || 0)), 0);
     
@@ -1105,7 +1036,7 @@ const Expenses: React.FC = () => {
     };
   }, [filteredExpenses]);
 
-  if (loading) {
+  if (globalLoading) {
     return <GlobalLoading message="💰 Carregando Despesas" subtitle="Buscando suas despesas..." />;
   }
 
@@ -1164,7 +1095,7 @@ const Expenses: React.FC = () => {
             fullWidth
           >
             <option value="">Todas as categorias</option>
-             {categories.map(category => (
+             {expenseCategories.map(category => (
                <option key={category.id} value={category.id}>
                  {category.name}
                </option>
@@ -1224,10 +1155,10 @@ const Expenses: React.FC = () => {
 
              <ExpensesList>
          <ListHeader>
-           <ListTitle>Lista de Despesas ({filteredExpenses.length})</ListTitle>
+           <ListTitle>Lista de Despesas ({searchFilteredExpenses.length})</ListTitle>
         </ListHeader>
 
-        {filteredExpenses.length === 0 ? (
+        {searchFilteredExpenses.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
             Nenhuma despesa encontrada
           </div>
@@ -1247,7 +1178,7 @@ const Expenses: React.FC = () => {
               </TableRow>
             </TableHeader>
             <tbody>
-              {filteredExpenses.map((expense: Expense) => (
+              {searchFilteredExpenses.map((expense: Expense) => (
                 <TableRow key={expense.id}>
                   <TableCell>
                     <div>
@@ -1418,7 +1349,7 @@ const Expenses: React.FC = () => {
                    onChange={(e) => handleInputChange('categoryId', e.target.value)}
                  >
                 <option value="">Selecione a categoria</option>
-                   {categories.map(category => (
+                   {expenseCategories.map(category => (
                      <option key={category.id} value={category.id}>
                        {category.name}
                      </option>
@@ -1444,7 +1375,7 @@ const Expenses: React.FC = () => {
                    onChange={(e) => handleInputChange('subcategoryId', e.target.value)}
                  >
                 <option value="">Selecione a subcategoria (opcional)</option>
-                   {subcategories.map(subcategory => (
+                   {filteredSubcategories.map(subcategory => (
                      <option key={subcategory.id} value={subcategory.id}>
                        {subcategory.name}
                      </option>

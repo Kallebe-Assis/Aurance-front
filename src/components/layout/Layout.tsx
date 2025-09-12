@@ -9,7 +9,7 @@ interface LayoutProps {
 
 const LayoutContainer = styled.div`
   min-height: 100vh;
-  background-color: var(--bg-secondary);
+  background-color: var(--gray-200);
 `;
 
 const MainContent = styled.main`

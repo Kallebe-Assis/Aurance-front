@@ -5,6 +5,7 @@ import { bankAccountService, categoryService } from '../services/api';
 import { BankAccount, Category } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
+import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
 
 const BankAccountsContainer = styled.div`
@@ -542,8 +543,16 @@ const Switch = styled.label`
 `;
 
 const BankAccounts: React.FC = () => {
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Usar dados do contexto global
+  const { 
+    bankAccounts, 
+    isLoading: globalLoading,
+    addBankAccount,
+    updateBankAccount,
+    removeBankAccount,
+    refreshBankAccounts
+  } = useData();
+  
   const [stats, setStats] = useState({
     totalAccounts: 0,
     totalBalance: 0,
@@ -570,49 +579,19 @@ const BankAccounts: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchBankAccounts();
-  }, []);
+    calculateStats();
+  }, [bankAccounts]);
 
-  const fetchBankAccounts = async () => {
-    try {
-      setLoading(true);
-      console.log('🔍 Buscando contas bancárias...');
-      const response = await bankAccountService.getBankAccounts();
-      const accounts = response.data?.bankAccounts || [];
-      console.log('📦 Contas bancárias recebidas:', accounts);
-      setBankAccounts(accounts);
+  const calculateStats = () => {
+    const totalBalance = bankAccounts.reduce((sum: number, account: BankAccount) => sum + (account.balance || 0), 0);
+    const activeAccounts = bankAccounts.filter((account: BankAccount) => account.isActive).length;
 
-      // Calcular estatísticas
-      const totalBalance = accounts.reduce((sum: number, account: BankAccount) => sum + (account.balance || 0), 0);
-      const activeAccounts = accounts.filter((account: BankAccount) => account.isActive).length;
-
-      setStats({
-        totalAccounts: accounts.length,
-        totalBalance,
-        activeAccounts,
-        totalTransactions: 0 // Será implementado quando tivermos transações
-      });
-      
-      console.log('📊 Estatísticas calculadas:', {
-        totalAccounts: accounts.length,
-        totalBalance,
-        activeAccounts
-      });
-    } catch (error) {
-      console.error('Erro ao carregar contas bancárias:', error);
-      setBankAccounts([]);
-      setStats({
-        totalAccounts: 0,
-        totalBalance: 0,
-        activeAccounts: 0,
-        totalTransactions: 0
-      });
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status !== 500) {
-        toast.error('Erro ao carregar contas bancárias');
-      }
-    } finally {
-      setLoading(false);
-    }
+    setStats({
+      totalAccounts: bankAccounts.length,
+      totalBalance,
+      activeAccounts,
+      totalTransactions: 0 // Será implementado quando tivermos transações
+    });
   };
 
   const openModal = (type: 'create' | 'edit' | 'view', account?: BankAccount) => {
@@ -699,15 +678,20 @@ const BankAccounts: React.FC = () => {
       };
 
       if (modalType === 'create') {
-        await bankAccountService.createBankAccount(accountData);
+        const response = await bankAccountService.createBankAccount(accountData);
         toast.success('Conta bancária criada com sucesso!');
+        
+        // Adicionar conta ao contexto global
+        addBankAccount(response.data);
       } else if (modalType === 'edit' && selectedAccount) {
-        await bankAccountService.updateBankAccount(selectedAccount.id, accountData);
+        const response = await bankAccountService.updateBankAccount(selectedAccount.id, accountData);
         toast.success('Conta bancária atualizada com sucesso!');
+        
+        // Atualizar conta no contexto global
+        updateBankAccount(response.data);
       }
 
       closeModal();
-      fetchBankAccounts();
     } catch (error) {
       console.error('Erro ao salvar conta bancária:', error);
       toast.error('Erro ao salvar conta bancária');
@@ -719,7 +703,9 @@ const BankAccounts: React.FC = () => {
       try {
         await bankAccountService.deleteBankAccount(accountId);
         toast.success('Conta bancária deletada com sucesso!');
-        fetchBankAccounts();
+        
+        // Remover conta do contexto global
+        removeBankAccount(accountId);
       } catch (error) {
         console.error('Erro ao deletar conta bancária:', error);
         toast.error('Erro ao deletar conta bancária');
@@ -744,7 +730,7 @@ const BankAccounts: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (globalLoading) {
     return <GlobalLoading message="🏦 Carregando Contas" subtitle="Buscando suas contas bancárias..." />;
   }
 
@@ -832,6 +818,9 @@ const BankAccounts: React.FC = () => {
               <AccountBalance>
                 <BalanceLabel>Saldo Atual</BalanceLabel>
                 <BalanceValue>{formatCurrency(account.balance || 0)}</BalanceValue>
+                <BalanceLabel style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
+                  Saldo Inicial: {formatCurrency(account.initialBalance || 0)}
+                </BalanceLabel>
               </AccountBalance>
 
               <AccountActions>
@@ -924,6 +913,10 @@ const BankAccounts: React.FC = () => {
                 <DetailRow>
                   <DetailLabel>Saldo Atual:</DetailLabel>
                   <DetailValue>{formatCurrency(selectedAccount.balance || 0)}</DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Saldo Inicial:</DetailLabel>
+                  <DetailValue>{formatCurrency(selectedAccount.initialBalance || 0)}</DetailValue>
                 </DetailRow>
                 {selectedAccount.limit && (
                   <DetailRow>

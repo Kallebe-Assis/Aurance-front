@@ -26,14 +26,14 @@ const Header = styled.div`
 `;
 
 const Title = styled.h3`
-  font-size: 1.125rem;
-  font-weight: 600;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   margin: 0 0 0.25rem 0;
 `;
 
 const Subtitle = styled.p`
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
   margin: 0;
 `;

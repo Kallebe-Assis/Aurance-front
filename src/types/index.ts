@@ -88,12 +88,24 @@ export interface ExpenseCard extends Transaction {
   creditCardId: string;
 }
 
+// Tipos para dados do Firebase
+export interface FirebaseTimestamp {
+  _seconds: number;
+  _nanoseconds?: number;
+}
+
+export interface FirebaseDate {
+  toDate(): Date;
+}
+
+export type FirebaseDateType = FirebaseTimestamp | FirebaseDate | Date | string;
+
 export interface Income {
   id: string;
   description: string;
   amount: number;
-  receivedDate: Date;
-  paymentDate?: Date;
+  receivedDate: FirebaseDateType;
+  paymentDate?: FirebaseDateType;
   isReceived: boolean;
   isPartial?: boolean;
   partialAmount?: number;
@@ -107,8 +119,8 @@ export interface Income {
   isRecurring?: boolean;
   recurringType?: string;
   userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: FirebaseDateType;
+  updatedAt: FirebaseDateType;
 }
 
 // Tipos para cartões de crédito
@@ -120,6 +132,7 @@ export interface BankAccount {
   agency?: string;
   accountType: 'checking' | 'savings' | 'investment' | 'credit';
   balance: number;
+  initialBalance: number;
   color?: string;
   isActive: boolean;
   description?: string;

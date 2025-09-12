@@ -6,7 +6,7 @@ import { expenseCardService } from '../services/expenseCardService';
 import { CreditCard, Expense, ExpenseCard, Category, Subcategory, BankAccount } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
-
+import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
 
 const CreditCardsContainer = styled.div`
@@ -1104,7 +1104,7 @@ const CardsLoadingOverlay = styled.div<{ isVisible: boolean }>`
 `;
 
 const CreditCards: React.FC = () => {
-  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const { creditCards, updateCreditCard, refreshCreditCards, addCreditCard, removeCreditCard } = useData();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalCards: 0,
@@ -1172,7 +1172,7 @@ const CreditCards: React.FC = () => {
   const [expenseFormData, setExpenseFormData] = useState({
     description: '',
     amount: '',
-    dueDate: '',
+    dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
     categoryId: '',
     subcategoryId: '',
     tags: '',
@@ -1201,34 +1201,12 @@ const CreditCards: React.FC = () => {
   const updateCardValuesOnly = async (newMonth: Date) => {
     try {
       await expenseCardService.updateMetrics(newMonth);
-      const response = await creditCardService.getCreditCards();
-      const updatedCards = response.data || [];
-      
-      const changedValues = new Set<string>();
-      
-      setCreditCards(prevCards => 
-        prevCards.map(prevCard => {
-          const updatedCard = updatedCards.find((card: CreditCard) => card.id === prevCard.id);
-          if (!updatedCard) return prevCard;
-          
-          // Verificar mudanças e animar
-          if (prevCard.totalSpent !== updatedCard.totalSpent) changedValues.add(`${prevCard.id}-totalSpent`);
-          if (prevCard.currentBill !== updatedCard.currentBill) changedValues.add(`${prevCard.id}-currentBill`);
-          if (prevCard.availableLimit !== updatedCard.availableLimit) changedValues.add(`${prevCard.id}-availableLimit`);
-          
-          return { ...prevCard, ...updatedCard };
-        })
-      );
-      
-      // Animação suave
-      if (changedValues.size > 0) {
-        setAnimatingValues(changedValues);
-        setTimeout(() => setAnimatingValues(new Set()), 600);
-      }
+      // Usar o refreshCreditCards do DataContext para atualizar globalmente
+      await refreshCreditCards();
       
       // Recalcular stats
       if (expenses.length > 0) {
-        recalculateStats(updatedCards, expenses);
+        recalculateStats(creditCards, expenses);
       }
       
     } catch (error) {
@@ -1258,7 +1236,24 @@ const CreditCards: React.FC = () => {
 
   const goToPreviousMonth = () => changeMonth(-1);
   const goToNextMonth = () => changeMonth(1);
-  const goToToday = () => changeMonth(0);
+  const goToToday = async () => {
+    try {
+      setIsChangingMonth(true);
+      const today = new Date();
+      setCurrentMonth(today);
+      
+      // Adicionar delay mínimo para mostrar o loading
+      const [updateResult] = await Promise.all([
+        updateCardValuesOnly(today),
+        new Promise(resolve => setTimeout(resolve, 300)) // Mínimo 300ms
+      ]);
+      
+    } catch (error) {
+      console.error('Erro ao ir para hoje:', error);
+    } finally {
+      setIsChangingMonth(false);
+    }
+  };
 
   const formatMonthYear = (date: Date) => 
     date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
@@ -1296,19 +1291,17 @@ const CreditCards: React.FC = () => {
     expenseCount: getExpensesForMonth(card.id, month).length
   });
 
+  // Usar o DataContext para carregar cartões
   const fetchCreditCards = async () => {
     try {
       setLoading(true);
-      const response = await creditCardService.getCreditCards();
-      const cards = response.data || [];
-      setCreditCards(cards);
-
+      await refreshCreditCards();
+      
       if (expenses.length > 0) {
-        recalculateStats(cards, expenses);
+        recalculateStats(creditCards, expenses);
       }
     } catch (error) {
       console.error('Erro ao carregar cartões:', error);
-      setCreditCards([]);
       setStats({ totalCards: 0, totalLimit: 0, totalUsed: 0, totalAvailable: 0 });
       toast.error('Erro ao carregar cartões de crédito');
     } finally {
@@ -1573,15 +1566,18 @@ const CreditCards: React.FC = () => {
       };
 
       if (modalType === 'create') {
-        await creditCardService.createCreditCard(cardData);
+        const response = await creditCardService.createCreditCard(cardData);
         toast.success('Cartão criado com sucesso!');
+        // Adicionar cartão ao contexto global
+        addCreditCard(response.data);
       } else if (modalType === 'edit' && editingCardId) {
-        await creditCardService.updateCreditCard(editingCardId, cardData);
+        const response = await creditCardService.updateCreditCard(editingCardId, cardData);
         toast.success('Cartão atualizado com sucesso!');
+        // Atualizar cartão no contexto global
+        updateCreditCard(response.data);
       }
 
       closeModal();
-      fetchCreditCards();
     } catch (error) {
       console.error('Erro ao salvar cartão:', error);
       toast.error('Erro ao salvar cartão');
@@ -1593,7 +1589,8 @@ const CreditCards: React.FC = () => {
       try {
         await creditCardService.deleteCreditCard(cardId);
         toast.success('Cartão deletado com sucesso!');
-        fetchCreditCards();
+        // Remover cartão do contexto global
+        removeCreditCard(cardId);
       } catch (error) {
         console.error('Erro ao deletar cartão:', error);
         toast.error('Erro ao deletar cartão');
@@ -1607,7 +1604,7 @@ const CreditCards: React.FC = () => {
     setExpenseFormData({
       description: '',
       amount: '',
-      dueDate: '',
+      dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
       categoryId: '',
       subcategoryId: '',
       tags: '',
@@ -1744,7 +1741,7 @@ const CreditCards: React.FC = () => {
 
   const handleEditExpense = (expense: Expense | ExpenseCard) => {
     setEditingExpense(expense);
-    setSelectedCardForExpense(creditCards.find(card => card.id === expense.creditCardId) || null);
+    setSelectedCardForExpense(creditCards.find((card: CreditCard) => card.id === expense.creditCardId) || null);
     
     // Função para formatar data para input
     const formatDateForInput = (date: Date | string | { _seconds: number; _nanoseconds: number } | null | undefined) => {
@@ -1891,7 +1888,7 @@ const CreditCards: React.FC = () => {
       console.log('💳 Criando despesa de pagamento:', paymentExpense);
       
       // Usar rota específica para pagamentos
-      const response = await fetch('http://localhost:3001/api/expenses/payment', {
+      const response = await fetch('https://aurance-back-end.vercel.app/api/expenses/payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2054,7 +2051,7 @@ const CreditCards: React.FC = () => {
         </EmptyState>
       ) : (
         <CardsGrid>
-          {creditCards.map(card => {
+          {creditCards.map((card: CreditCard) => {
             const isExpanded = expandedCards.has(card.id);
             const cardStats = getCardStats(card, currentMonth);
             const monthExpenses = getExpensesForMonth(card.id, currentMonth);
@@ -2094,7 +2091,7 @@ const CreditCards: React.FC = () => {
                         setExpenseFormData({
                           description: '',
                           amount: '',
-                          dueDate: '',
+                          dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
                           categoryId: '',
                           subcategoryId: '',
                           tags: '',
@@ -2126,31 +2123,6 @@ const CreditCards: React.FC = () => {
                       Nova Despesa
                     </button>
                     
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        refreshData();
-                      }}
-                      style={{
-                        background: '#10B981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '6px 8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '10px',
-                        fontWeight: '500',
-                        gap: '2px'
-                      }}
-                      title="Atualizar Dados"
-                    >
-                      <FiRefreshCw size={12} />
-                      Atualizar
-                    </button>
                     
                     <button
                       type="button"
@@ -2748,7 +2720,7 @@ const CreditCards: React.FC = () => {
                         required
                       >
                         <option value="">Selecione uma categoria</option>
-                        {(categories || []).map(category => (
+                        {(categories || []).filter(category => category.type === 'expense').map(category => (
                           <option key={category.id} value={category.id}>
                             {category.name}
                           </option>
@@ -2949,7 +2921,7 @@ const CreditCards: React.FC = () => {
                      if (!viewingExpense.paidDate) return '-';
                      
                      const paymentDate = viewingExpense.paidDate ? new Date(viewingExpense.paidDate) : null;
-                     const card = creditCards.find(c => c.id === viewingExpense.creditCardId);
+                      const card = creditCards.find((c: CreditCard) => c.id === viewingExpense.creditCardId);
                      
                      if (!card || !card.closingDate || !paymentDate) return '-';
                      

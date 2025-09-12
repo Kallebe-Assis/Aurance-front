@@ -1,11 +1,86 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FiPlus, FiTag, FiEdit, FiTrash2, FiChevronDown, FiChevronRight, FiFolder, FiFolderPlus } from 'react-icons/fi';
+import { 
+  FiPlus, FiTag, FiEdit, FiTrash2, FiChevronDown, FiChevronRight, FiFolder, FiFolderPlus,
+  FiHome, FiShoppingBag, FiTruck, FiCreditCard, FiDollarSign, FiTrendingUp, FiTrendingDown,
+  FiCoffee, FiShoppingCart, FiZap, FiWifi, FiPhone, FiMonitor, FiActivity, FiBook,
+  FiMusic, FiCamera, FiHeart, FiGift, FiBriefcase, FiUsers, FiUser, FiMail,
+  FiCalendar, FiClock, FiMapPin, FiGlobe, FiShield, FiSettings, FiTool,
+  FiSun, FiMoon, FiCloud, FiCloudRain, FiWind, FiThermometer, FiUmbrella, FiStar,
+  FiAward, FiTarget, FiFlag, FiLayers, FiGrid, FiBox, FiPackage,
+  FiNavigation, FiNavigation2, FiBarChart, FiPieChart, FiFileText, FiImage
+} from 'react-icons/fi';
 import { categoryService, subcategoryService } from '../services/api';
 import { Category, Subcategory } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
 import toast from 'react-hot-toast';
+
+// Lista de ícones disponíveis para categorias
+const AVAILABLE_ICONS = [
+  { name: 'tag', component: FiTag },
+  { name: 'home', component: FiHome },
+  { name: 'shopping-bag', component: FiShoppingBag },
+  { name: 'truck', component: FiTruck },
+  { name: 'credit-card', component: FiCreditCard },
+  { name: 'dollar-sign', component: FiDollarSign },
+  { name: 'trending-up', component: FiTrendingUp },
+  { name: 'trending-down', component: FiTrendingDown },
+  { name: 'coffee', component: FiCoffee },
+  { name: 'shopping-cart', component: FiShoppingCart },
+  { name: 'zap', component: FiZap },
+  { name: 'wifi', component: FiWifi },
+  { name: 'phone', component: FiPhone },
+  { name: 'monitor', component: FiMonitor },
+  { name: 'activity', component: FiActivity },
+  { name: 'book', component: FiBook },
+  { name: 'music', component: FiMusic },
+  { name: 'camera', component: FiCamera },
+  { name: 'heart', component: FiHeart },
+  { name: 'gift', component: FiGift },
+  { name: 'briefcase', component: FiBriefcase },
+  { name: 'users', component: FiUsers },
+  { name: 'user', component: FiUser },
+  { name: 'mail', component: FiMail },
+  { name: 'calendar', component: FiCalendar },
+  { name: 'clock', component: FiClock },
+  { name: 'map-pin', component: FiMapPin },
+  { name: 'globe', component: FiGlobe },
+  { name: 'shield', component: FiShield },
+  { name: 'settings', component: FiSettings },
+  { name: 'tool', component: FiTool },
+  { name: 'sun', component: FiSun },
+  { name: 'moon', component: FiMoon },
+  { name: 'cloud', component: FiCloud },
+  { name: 'cloud-rain', component: FiCloudRain },
+  { name: 'wind', component: FiWind },
+  { name: 'thermometer', component: FiThermometer },
+  { name: 'umbrella', component: FiUmbrella },
+  { name: 'star', component: FiStar },
+  { name: 'award', component: FiAward },
+  { name: 'target', component: FiTarget },
+  { name: 'flag', component: FiFlag },
+  { name: 'layers', component: FiLayers },
+  { name: 'grid', component: FiGrid },
+  { name: 'box', component: FiBox },
+  { name: 'package', component: FiPackage },
+  { name: 'navigation', component: FiNavigation },
+  { name: 'navigation2', component: FiNavigation2 },
+  { name: 'bar-chart', component: FiBarChart },
+  { name: 'pie-chart', component: FiPieChart },
+  { name: 'file-text', component: FiFileText },
+  { name: 'image', component: FiImage }
+];
+
+// Função para renderizar o ícone selecionado
+const renderIcon = (iconName: string, size: number = 24) => {
+  const iconData = AVAILABLE_ICONS.find(icon => icon.name === iconName);
+  if (iconData) {
+    const IconComponent = iconData.component;
+    return <IconComponent size={size} />;
+  }
+  return <FiTag size={size} />; // Fallback para tag
+};
 
 const CategoriesContainer = styled.div`
   display: flex;
@@ -323,6 +398,66 @@ const ColorPicker = styled.input`
   }
 `;
 
+const IconSelector = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+`;
+
+const IconGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--spacing-xs);
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+`;
+
+const IconOption = styled.button<{ selected: boolean; color: string }>`
+  width: 40px;
+  height: 40px;
+  border: 2px solid ${({ selected, color }) => selected ? color : 'var(--gray-300)'};
+  border-radius: var(--radius-md);
+  background-color: ${({ selected, color }) => selected ? `${color}20` : 'var(--white)'};
+  color: ${({ selected, color }) => selected ? color : 'var(--text-secondary)'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.2rem;
+  
+  &:hover {
+    border-color: ${({ color }) => color};
+    background-color: ${({ color }) => `${color}10`};
+    color: ${({ color }) => color};
+  }
+`;
+
+const SelectedIconPreview = styled.div<{ color: string }>`
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: var(--gray-50);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+`;
+
+const PreviewIcon = styled.div<{ color: string }>`
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background-color: ${({ color }) => color}20;
+  color: ${({ color }) => color};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+`;
+
 const FormActions = styled.div`
   display: flex;
   gap: var(--spacing-md);
@@ -582,9 +717,9 @@ const Categories: React.FC = () => {
               <CategoryCard key={category.id}>
                 <CategoryHeader>
                   <CategoryInfo>
-                    <CategoryIcon color={category.color}>
-                      <FiTag />
-                    </CategoryIcon>
+                <CategoryIcon color={category.color}>
+                  {renderIcon(category.icon, 24)}
+                </CategoryIcon>
                     <CategoryDetails>
                       <CategoryName>{category.name}</CategoryName>
                       <CategoryType type={category.type}>
@@ -705,6 +840,31 @@ const Categories: React.FC = () => {
                 />
               </FormGroup>
             </FormRow>
+            
+            <FormGroup>
+              <Label>Ícone</Label>
+              <IconSelector>
+                <SelectedIconPreview color={categoryForm.color}>
+                  <PreviewIcon color={categoryForm.color}>
+                    {renderIcon(categoryForm.icon, 20)}
+                  </PreviewIcon>
+                  <span>Ícone selecionado: {categoryForm.icon}</span>
+                </SelectedIconPreview>
+                <IconGrid>
+                  {AVAILABLE_ICONS.map(icon => (
+                    <IconOption
+                      key={icon.name}
+                      selected={categoryForm.icon === icon.name}
+                      color={categoryForm.color}
+                      onClick={() => setCategoryForm({ ...categoryForm, icon: icon.name })}
+                      title={icon.name}
+                    >
+                      <icon.component size={20} />
+                    </IconOption>
+                  ))}
+                </IconGrid>
+              </IconSelector>
+            </FormGroup>
             
             <FormActions>
               <Button variant="outline" onClick={() => setIsCategoryModalOpen(false)}>

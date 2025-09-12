@@ -2,10 +2,41 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiChevronLeft, FiChevronRight, FiDollarSign, FiTrendingUp } from 'react-icons/fi';
 import { expenseService, incomeService } from '../services/api';
-import { Expense, Income } from '../types';
+import { Expense, Income, FirebaseDateType, FirebaseTimestamp, FirebaseDate } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
 import toast from 'react-hot-toast';
+
+// Função utilitária para converter datas do Firebase
+const convertFirebaseDate = (date: FirebaseDateType): Date => {
+  if (!date) {
+    throw new Error('Data inválida');
+  }
+
+  // Se for um objeto do Firebase com _seconds
+  if (typeof date === 'object' && '_seconds' in date) {
+    const timestamp = date as FirebaseTimestamp;
+    return new Date(timestamp._seconds * 1000);
+  }
+  
+  // Se for um objeto do Firebase com toDate()
+  if (typeof date === 'object' && 'toDate' in date) {
+    const firebaseDate = date as FirebaseDate;
+    return firebaseDate.toDate();
+  }
+  
+  // Se for uma string
+  if (typeof date === 'string') {
+    return new Date(date);
+  }
+  
+  // Se já for uma instância de Date
+  if (date instanceof Date) {
+    return date;
+  }
+  
+  throw new Error('Formato de data não suportado');
+};
 
 const CalendarContainer = styled.div`
   display: flex;
@@ -57,14 +88,18 @@ const CalendarGrid = styled.div`
   grid-template-columns: repeat(7, 1fr);
   gap: 1px;
   background-color: var(--gray-200);
-  border-radius: var(--radius-lg);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   overflow: hidden;
 `;
 
 const CalendarHeader = styled.div`
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background-color: var(--gray-50);
+  gap: 1px;
+  background-color: var(--gray-200);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+  margin-bottom: 0;
 `;
 
 const CalendarHeaderCell = styled.div`
@@ -73,6 +108,8 @@ const CalendarHeaderCell = styled.div`
   font-weight: 600;
   color: var(--text-secondary);
   font-size: 0.875rem;
+  background-color: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
 `;
 
 const CalendarDay = styled.div<{ isCurrentMonth: boolean; isToday: boolean; hasEvents: boolean }>`
@@ -83,6 +120,8 @@ const CalendarDay = styled.div<{ isCurrentMonth: boolean; isToday: boolean; hasE
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  display: flex;
+  flex-direction: column;
   
   ${({ isCurrentMonth }) => !isCurrentMonth && `
     background-color: var(--gray-50);
@@ -92,14 +131,13 @@ const CalendarDay = styled.div<{ isCurrentMonth: boolean; isToday: boolean; hasE
   ${({ isToday }) => isToday && `
     background-color: var(--primary-color)10;
     border-color: var(--primary-color);
-  `}
-  
-  ${({ hasEvents }) => hasEvents && `
-    background-color: var(--warning-color)10;
+    box-shadow: 0 0 0 2px var(--primary-color)20;
   `}
   
   &:hover {
     background-color: var(--gray-50);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 `;
 
@@ -109,14 +147,104 @@ const DayNumber = styled.div<{ isToday: boolean }>`
   margin-bottom: var(--spacing-xs);
 `;
 
-const EventIndicator = styled.div`
-  position: absolute;
-  top: var(--spacing-xs);
-  right: var(--spacing-xs);
+const DayContent = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--spacing-xs);
+`;
+
+const TransactionIndicator = styled.div<{ type: 'expense' | 'income' }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  ${({ type }) => type === 'expense' && `
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  `}
+  
+  ${({ type }) => type === 'income' && `
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+  `}
+`;
+
+const TransactionIcon = styled.div<{ type: 'expense' | 'income' }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: var(--warning-color);
+  
+  ${({ type }) => type === 'expense' && `
+    background-color: #dc2626;
+  `}
+  
+  ${({ type }) => type === 'income' && `
+    background-color: #16a34a;
+  `}
+`;
+
+const TransactionAmount = styled.span`
+  font-size: 9px;
+  font-weight: 700;
+`;
+
+const SummaryIndicator = styled.div<{ hasExpenses: boolean; hasIncomes: boolean }>`
+  position: absolute;
+  top: var(--spacing-xs);
+  right: var(--spacing-xs);
+  display: flex;
+  gap: 2px;
+  
+  ${({ hasExpenses, hasIncomes }) => {
+    if (hasExpenses && hasIncomes) {
+      return `
+        &::before {
+          content: '';
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background-color: #dc2626;
+        }
+        &::after {
+          content: '';
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background-color: #16a34a;
+        }
+      `;
+    } else if (hasExpenses) {
+      return `
+        &::before {
+          content: '';
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #dc2626;
+        }
+      `;
+    } else if (hasIncomes) {
+      return `
+        &::before {
+          content: '';
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #16a34a;
+        }
+      `;
+    }
+  }}
 `;
 
 const EventModal = styled.div<{ isOpen: boolean }>`
@@ -178,21 +306,83 @@ const EventList = styled.div`
   gap: var(--spacing-md);
 `;
 
-const EventItem = styled.div`
+const EventItem = styled.div<{ type: 'expense' | 'income' }>`
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
-  background-color: var(--gray-50);
-  border: 1px solid var(--gray-200);
+  border-left: 4px solid;
+  transition: all 0.2s ease;
+  
+  ${({ type }) => type === 'expense' && `
+    background-color: #fef2f2;
+    border-left-color: #dc2626;
+    border: 1px solid #fecaca;
+  `}
+  
+  ${({ type }) => type === 'income' && `
+    background-color: #f0fdf4;
+    border-left-color: #16a34a;
+    border: 1px solid #bbf7d0;
+  `}
+  
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
 `;
 
-const EventTitle = styled.div`
+const EventTitle = styled.div<{ type: 'expense' | 'income' }>`
   font-weight: 600;
   margin-bottom: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  
+  ${({ type }) => type === 'expense' && `
+    color: #dc2626;
+  `}
+  
+  ${({ type }) => type === 'income' && `
+    color: #16a34a;
+  `}
 `;
 
 const EventDetails = styled.div`
   font-size: 0.875rem;
   color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+`;
+
+const EventAmount = styled.span<{ type: 'expense' | 'income' }>`
+  font-weight: 700;
+  font-size: 1.1rem;
+  
+  ${({ type }) => type === 'expense' && `
+    color: #dc2626;
+  `}
+  
+  ${({ type }) => type === 'income' && `
+    color: #16a34a;
+  `}
+`;
+
+const EventIcon = styled.div<{ type: 'expense' | 'income' }>`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  
+  ${({ type }) => type === 'expense' && `
+    background-color: #fecaca;
+    color: #dc2626;
+  `}
+  
+  ${({ type }) => type === 'income' && `
+    background-color: #bbf7d0;
+    color: #16a34a;
+  `}
 `;
 
 const Calendar: React.FC = () => {
@@ -213,8 +403,15 @@ const Calendar: React.FC = () => {
           incomeService.getIncomes()
         ]);
         
-        setExpenses(expensesResponse.data.expenses || []);
-        setIncomes(incomesResponse.data.incomes || []);
+        const expensesData = expensesResponse.data.expenses || [];
+        const incomesData = incomesResponse.data.incomes || [];
+        
+        console.log('📅 Calendário - Despesas carregadas:', expensesData.length);
+        console.log('📅 Calendário - Receitas carregadas:', incomesData.length);
+        console.log('📅 Calendário - Primeira receita:', incomesData[0]);
+        
+        setExpenses(expensesData);
+        setIncomes(incomesData);
       } catch (error) {
         console.error('Erro ao carregar dados do calendário:', error);
         toast.error('Erro ao carregar dados do calendário');
@@ -250,10 +447,27 @@ const Calendar: React.FC = () => {
     });
     
     const incomesForDate = incomes.filter(income => {
-      const incomeDate = new Date(income.receivedDate);
-      return incomeDate.getDate() === day && 
-             incomeDate.getMonth() === month && 
-             incomeDate.getFullYear() === year;
+      try {
+        const incomeDate = convertFirebaseDate(income.receivedDate);
+        
+        // Verificar se a data é válida
+        if (isNaN(incomeDate.getTime())) {
+          return false;
+        }
+        
+        const matches = incomeDate.getDate() === day && 
+                       incomeDate.getMonth() === month && 
+                       incomeDate.getFullYear() === year;
+        
+        if (matches) {
+          console.log('🎯 Receita encontrada para', date.toDateString(), ':', income.description, incomeDate.toDateString());
+        }
+        
+        return matches;
+      } catch (error) {
+        console.error('Erro ao processar data da receita:', error, income.receivedDate);
+        return false;
+      }
     });
     
     return { expenses: expensesForDate, incomes: incomesForDate };
@@ -276,28 +490,11 @@ const Calendar: React.FC = () => {
     });
   };
 
-  const formatDate = (date: Date | string | { _seconds: number; _nanoseconds: number } | null | undefined) => {
+  const formatDate = (date: FirebaseDateType | null | undefined) => {
     if (!date) return '-';
     
     try {
-      let dateObj: Date;
-      
-      // Se for um objeto do Firebase (tem _seconds)
-      if (date && typeof date === 'object' && '_seconds' in date && typeof date._seconds === 'number') {
-        dateObj = new Date(date._seconds * 1000);
-      }
-      // Se for uma string
-      else if (typeof date === 'string') {
-        dateObj = new Date(date);
-      }
-      // Se já for uma instância de Date
-      else if (date instanceof Date) {
-        dateObj = date;
-      }
-      // Fallback
-      else {
-        return '-';
-      }
+      const dateObj = convertFirebaseDate(date);
       
       // Verificar se a data é válida
       if (isNaN(dateObj.getTime())) {
@@ -335,11 +532,11 @@ const Calendar: React.FC = () => {
     
     const days = [];
     
-    // Dias do mês anterior
+    // Dias do mês anterior (preencher espaços antes do primeiro dia do mês)
     const prevMonth = new Date(currentYear, currentMonth - 1, 0);
     const daysInPrevMonth = prevMonth.getDate();
-    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-      const day = daysInPrevMonth - i;
+    for (let i = firstDayOfWeek; i > 0; i--) {
+      const day = daysInPrevMonth - i + 1;
       const date = new Date(currentYear, currentMonth - 1, day);
       days.push({ date, isCurrentMonth: false });
     }
@@ -350,7 +547,7 @@ const Calendar: React.FC = () => {
       days.push({ date, isCurrentMonth: true });
     }
     
-    // Dias do próximo mês
+    // Dias do próximo mês (preencher espaços para completar 6 semanas)
     const remainingDays = 42 - days.length; // 6 semanas * 7 dias
     for (let day = 1; day <= remainingDays; day++) {
       const date = new Date(currentYear, currentMonth + 1, day);
@@ -386,16 +583,21 @@ const Calendar: React.FC = () => {
         </CalendarNavigation>
       </Header>
 
+      <CalendarHeader>
+        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+          <CalendarHeaderCell key={day}>{day}</CalendarHeaderCell>
+        ))}
+      </CalendarHeader>
+      
       <CalendarGrid>
-        <CalendarHeader>
-          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-            <CalendarHeaderCell key={day}>{day}</CalendarHeaderCell>
-          ))}
-        </CalendarHeader>
-        
         {renderCalendar().map(({ date, isCurrentMonth }, index) => {
           const isToday = date.toDateString() === new Date().toDateString();
-          const hasEventsOnDay = hasEvents(date);
+          const events = getEventsForDate(date);
+          const hasEventsOnDay = events.expenses.length > 0 || events.incomes.length > 0;
+          
+          // Calcular totais
+          const totalExpenses = events.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+          const totalIncomes = events.incomes.reduce((sum, income) => sum + income.amount, 0);
           
           return (
             <CalendarDay
@@ -408,7 +610,37 @@ const Calendar: React.FC = () => {
               <DayNumber isToday={isToday}>
                 {date.getDate()}
               </DayNumber>
-              {hasEventsOnDay && <EventIndicator />}
+              
+              {hasEventsOnDay && (
+                <SummaryIndicator 
+                  hasExpenses={events.expenses.length > 0} 
+                  hasIncomes={events.incomes.length > 0} 
+                />
+              )}
+              
+              {isCurrentMonth && hasEventsOnDay && (
+                <DayContent>
+                  {events.expenses.length > 0 && (
+                    <TransactionIndicator type="expense">
+                      <TransactionIcon type="expense" />
+                      <span>Desp</span>
+                      <TransactionAmount>
+                        R$ {totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </TransactionAmount>
+                    </TransactionIndicator>
+                  )}
+                  
+                  {events.incomes.length > 0 && (
+                    <TransactionIndicator type="income">
+                      <TransactionIcon type="income" />
+                      <span>Rec</span>
+                      <TransactionAmount>
+                        R$ {totalIncomes.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </TransactionAmount>
+                    </TransactionIndicator>
+                  )}
+                </DayContent>
+              )}
             </CalendarDay>
           );
         })}
@@ -431,10 +663,15 @@ const Calendar: React.FC = () => {
             ) : (
               <>
                 {selectedEvents.expenses.map((expense: Expense, idx: number) => (
-                  <EventItem key={`expense-${idx}`}>
-                    <EventTitle style={{ color: 'var(--error-color)' }}>
-                      <FiDollarSign style={{ marginRight: '4px' }} />
-                      {expense.description}: {formatCurrency(expense.amount)}
+                  <EventItem key={`expense-${idx}`} type="expense">
+                    <EventTitle type="expense">
+                      <EventIcon type="expense">
+                        <FiDollarSign />
+                      </EventIcon>
+                      <div>
+                        <div>{expense.description}</div>
+                        <EventAmount type="expense">{formatCurrency(expense.amount)}</EventAmount>
+                      </div>
                     </EventTitle>
                     <EventDetails>
                       Vencimento: {formatDate(new Date(expense.dueDate))}
@@ -444,13 +681,18 @@ const Calendar: React.FC = () => {
                 ))}
                 
                 {selectedEvents.incomes.map((income: Income, idx: number) => (
-                  <EventItem key={`income-${idx}`}>
-                    <EventTitle style={{ color: 'var(--success-color)' }}>
-                      <FiTrendingUp style={{ marginRight: '4px' }} />
-                      {income.description}: {formatCurrency(income.amount)}
+                  <EventItem key={`income-${idx}`} type="income">
+                    <EventTitle type="income">
+                      <EventIcon type="income">
+                        <FiTrendingUp />
+                      </EventIcon>
+                      <div>
+                        <div>{income.description}</div>
+                        <EventAmount type="income">{formatCurrency(income.amount)}</EventAmount>
+                      </div>
                     </EventTitle>
                     <EventDetails>
-                      Data prevista: {formatDate(new Date(income.receivedDate))}
+                      Data prevista: {formatDate(income.receivedDate)}
                       {income.observations && ` • ${income.observations}`}
                     </EventDetails>
                   </EventItem>

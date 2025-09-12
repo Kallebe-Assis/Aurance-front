@@ -10,13 +10,15 @@ import {
   FiCalendar, 
   FiSettings,
   FiMenu,
-  FiX
+  FiX,
+  FiRepeat
 } from 'react-icons/fi';
 
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
 }
+
 
 const SidebarContainer = styled.aside<{ isOpen: boolean }>`
   position: fixed;
@@ -26,12 +28,29 @@ const SidebarContainer = styled.aside<{ isOpen: boolean }>`
   width: 280px;
   background: var(--white);
   border-right: 1px solid var(--gray-200);
-  z-index: var(--z-fixed);
+  z-index: 1000;
   transition: transform var(--transition-normal);
   box-shadow: var(--shadow-lg);
   
   @media (max-width: 768px) {
     transform: translateX(${({ isOpen }) => isOpen ? '0' : '-100%'});
+  }
+`;
+
+const Overlay = styled.div<{ isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: ${({ isOpen }) => isOpen ? 1 : 0};
+  visibility: ${({ isOpen }) => isOpen ? 'visible' : 'hidden'};
+  transition: all var(--transition-normal);
+  
+  @media (min-width: 769px) {
+    display: none;
   }
 `;
 
@@ -47,17 +66,47 @@ const Logo = styled.div`
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  cursor: pointer;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  &:hover {
+    transform: scale(1.1) rotate(2deg);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:not(:hover) {
+    background: transparent;
+  }
 `;
 
 const LogoImage = styled.img`
-  height: 32px;
+  height: 70px;
   width: auto;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  ${Logo}:hover & {
+    transform: scale(1.2) rotate(-5deg);
+    filter: brightness(1.2) drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+  }
 `;
 
 const LogoText = styled.span`
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--primary-color);
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  ${Logo}:hover & {
+    color: var(--white);
+    transform: scale(1.1) translateX(2px);
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    letter-spacing: 1px;
+  }
 `;
 
 const CloseButton = styled.button`
@@ -127,6 +176,11 @@ const NavLinkStyled = styled(NavLink)`
 const NavText = styled.span`
   font-weight: 500;
   font-size: 0.875rem;
+  transition: transform 0.3s ease-in-out;
+  
+  ${NavLinkStyled}:hover & {
+    transform: translateX(4px);
+  }
 `;
 
 const SidebarFooter = styled.div`
@@ -179,7 +233,8 @@ const navigationItems = [
   { path: '/expenses', icon: FiDollarSign, label: 'Despesas' },
   { path: '/incomes', icon: FiTrendingUp, label: 'Receitas' },
   { path: '/credit-cards', icon: FiCreditCard, label: 'Cartões' },
-      { path: '/bank-accounts', icon: FiDollarSign, label: 'Contas Bancárias' },
+  { path: '/bank-accounts', icon: FiDollarSign, label: 'Contas Bancárias' },
+  { path: '/transfers', icon: FiRepeat, label: 'Transferências' },
   { path: '/categories', icon: FiTag, label: 'Categorias' },
   { path: '/calendar', icon: FiCalendar, label: 'Calendário' },
   { path: '/settings', icon: FiSettings, label: 'Configurações' }
@@ -187,10 +242,12 @@ const navigationItems = [
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   return (
-    <SidebarContainer isOpen={isOpen}>
+    <>
+      <Overlay isOpen={isOpen} onClick={onToggle} />
+      <SidebarContainer isOpen={isOpen}>
       <SidebarHeader>
         <Logo>
-          <LogoImage src="/LOGO8.png" alt="Aurance Logo" />
+          <LogoImage src="/LOGO8-SF.png" alt="Aurance Logo" />
           <LogoText>Aurance</LogoText>
         </Logo>
         <CloseButton onClick={onToggle}>
@@ -229,6 +286,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         </UserInfo>
       </SidebarFooter>
     </SidebarContainer>
+    </>
   );
 };
 

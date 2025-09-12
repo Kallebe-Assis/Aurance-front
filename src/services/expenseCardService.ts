@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { ExpenseCard } from '../types';
 
-const API_URL = 'http://localhost:3001/api/expenses-cards';
+const API_URL = 'https://aurance-back-end.vercel.app/api/expenses-cards';
 
 // Configurar axios com token de autenticação
 const getAuthHeaders = () => {

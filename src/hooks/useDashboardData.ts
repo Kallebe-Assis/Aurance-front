@@ -140,7 +140,7 @@ export function useDashboardData(selectedPeriod: { start: Date; end: Date }) {
 
         // 1. BUSCAR DESPESAS
         console.log('🔍 Buscando despesas...');
-        const expensesResponse = await fetch('http://localhost:3001/api/expenses?excludeCreditCard=true', {
+        const expensesResponse = await fetch('https://aurance-back-end.vercel.app/api/expenses?excludeCreditCard=true', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -158,7 +158,7 @@ export function useDashboardData(selectedPeriod: { start: Date; end: Date }) {
 
         // 2. BUSCAR RECEITAS
         console.log('🔍 Buscando receitas...');
-        const incomesResponse = await fetch('http://localhost:3001/api/incomes', {
+        const incomesResponse = await fetch('https://aurance-back-end.vercel.app/api/incomes', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -176,7 +176,7 @@ export function useDashboardData(selectedPeriod: { start: Date; end: Date }) {
 
         // 3. BUSCAR CATEGORIAS
         console.log('🔍 Buscando categorias...');
-        const categoriesResponse = await fetch('http://localhost:3001/api/categories', {
+        const categoriesResponse = await fetch('https://aurance-back-end.vercel.app/api/categories', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -193,7 +193,7 @@ export function useDashboardData(selectedPeriod: { start: Date; end: Date }) {
 
         // 4. BUSCAR SUBCATEGORIAS
         console.log('🔍 Buscando subcategorias...');
-        const subcategoriesResponse = await fetch('http://localhost:3001/api/subcategories', {
+        const subcategoriesResponse = await fetch('https://aurance-back-end.vercel.app/api/subcategories', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -210,7 +210,7 @@ export function useDashboardData(selectedPeriod: { start: Date; end: Date }) {
 
         // 5. BUSCAR CARTÕES DE CRÉDITO
         console.log('🔍 Buscando cartões de crédito...');
-        const creditCardsResponse = await fetch('http://localhost:3001/api/credit-cards', {
+        const creditCardsResponse = await fetch('https://aurance-back-end.vercel.app/api/credit-cards', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

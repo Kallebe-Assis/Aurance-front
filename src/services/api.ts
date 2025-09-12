@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 
 // Configuração base do axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: process.env.REACT_APP_API_URL || 'https://aurance-back-end.vercel.app/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -14,15 +14,9 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    console.log('Token encontrado:', token ? 'Sim' : 'Não');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('Configuração da requisição:', {
-      url: config.url,
-      method: config.method,
-      headers: config.headers
-    });
     return config;
   },
   (error) => {
@@ -152,34 +146,25 @@ export const authService = {
 export const expenseService = {
   // Listar despesas
   getExpenses: async (filters?: any) => {
-    console.log('📡 expenseService.getExpenses - Filtros:', filters);
-    console.log('📡 expenseService.getExpenses - Tipos dos filtros:', Object.entries(filters || {}).map(([key, value]) => ({ key, value, type: typeof value })));
     const response = await api.get('/expenses', { params: filters });
-    console.log('📦 expenseService.getExpenses - Resposta:', response.data);
     return response.data;
   },
 
   // Obter despesa por ID
   getExpense: async (id: string) => {
-    console.log('📡 expenseService.getExpense - ID:', id);
     const response = await api.get(`/expenses/${id}`);
-    console.log('📦 expenseService.getExpense - Resposta:', response.data);
     return response.data;
   },
 
   // Criar despesa
   createExpense: async (expenseData: any) => {
-    console.log('📡 expenseService.createExpense - Dados:', expenseData);
     const response = await api.post('/expenses', expenseData);
-    console.log('📦 expenseService.createExpense - Resposta:', response.data);
     return response.data;
   },
 
   // Atualizar despesa
   updateExpense: async (id: string, expenseData: any) => {
-    console.log('📡 expenseService.updateExpense - ID:', id, 'Dados:', expenseData);
     const response = await api.put(`/expenses/${id}`, expenseData);
-    console.log('📦 expenseService.updateExpense - Resposta:', response.data);
     return response.data;
   },
 
@@ -613,6 +598,14 @@ export const reportService = {
       params: { format },
       responseType: 'blob'
     });
+    return response.data;
+  },
+
+  // Recálculo automático de saldos das contas bancárias
+  recalculateBalances: async () => {
+    console.log('🔄 Iniciando recálculo de saldos...');
+    const response = await api.post('/recalculate-balances');
+    console.log('✅ Recálculo concluído:', response.data);
     return response.data;
   }
 };

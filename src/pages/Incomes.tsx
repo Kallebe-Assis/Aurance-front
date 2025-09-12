@@ -1,12 +1,44 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiPlus, FiEye, FiEdit, FiTrash2, FiDollarSign } from 'react-icons/fi';
-import { incomeService, categoryService, subcategoryService, bankAccountService } from '../services/api';
-import { Income, Category, Subcategory, BankAccount } from '../types';
+import { incomeService } from '../services/api';
+import { Income, FirebaseDateType, FirebaseTimestamp, FirebaseDate } from '../types';
 import Button from '../components/common/Button';
 import { Input, Select, TextArea } from '../components/common/Input';
 import { GlobalLoading } from '../components/GlobalLoading';
+import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
+
+// Função utilitária para converter datas do Firebase
+const convertFirebaseDate = (date: FirebaseDateType): Date => {
+  if (!date) {
+    throw new Error('Data inválida');
+  }
+
+  // Se for um objeto do Firebase com _seconds
+  if (typeof date === 'object' && '_seconds' in date) {
+    const timestamp = date as FirebaseTimestamp;
+    return new Date(timestamp._seconds * 1000);
+  }
+  
+  // Se for um objeto do Firebase com toDate()
+  if (typeof date === 'object' && 'toDate' in date) {
+    const firebaseDate = date as FirebaseDate;
+    return firebaseDate.toDate();
+  }
+  
+  // Se for uma string
+  if (typeof date === 'string') {
+    return new Date(date);
+  }
+  
+  // Se já for uma instância de Date
+  if (date instanceof Date) {
+    return date;
+  }
+  
+  throw new Error('Formato de data não suportado');
+};
 
 const IncomesContainer = styled.div`
   display: flex;
@@ -261,26 +293,27 @@ const DashboardSection = styled.div`
 const DashboardCard = styled.div`
   background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
   border: 1px solid var(--gray-200);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
+  text-align: center;
   
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: var(--shadow-md);
   }
 `;
 
 const DashboardTitle = styled.h3`
-  margin: 0 0 var(--spacing-sm) 0;
-  font-size: 0.875rem;
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 500;
 `;
 
 const DashboardValue = styled.div<{ variant: string }>`
-  font-size: 2rem;
+  font-size: 1.25rem;
   font-weight: bold;
   margin-bottom: var(--spacing-xs);
   color: ${({ variant }) => {
@@ -294,7 +327,7 @@ const DashboardValue = styled.div<{ variant: string }>`
 `;
 
 const DashboardSubtitle = styled.div`
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   font-weight: 500;
 `;
@@ -329,11 +362,20 @@ const ClearFiltersButton = styled.button`
 `;
 
 const Incomes: React.FC = () => {
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Usar dados do contexto global
+  const { 
+    incomes, 
+    categories, 
+    subcategories, 
+    bankAccounts, 
+    isLoading: globalLoading,
+    addIncome,
+    updateIncome,
+    removeIncome,
+    refreshIncomes
+  } = useData();
+
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [viewingIncome, setViewingIncome] = useState<Income | null>(null);
@@ -349,7 +391,7 @@ const Incomes: React.FC = () => {
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
-    receivedDate: '',
+    receivedDate: new Date().toISOString().split('T')[0], // Data atual como padrão
     categoryId: '',
     subcategoryId: '',
     tags: '',
@@ -369,73 +411,16 @@ const Incomes: React.FC = () => {
     isReceived: ''
   });
 
-  // Carregar dados
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [incomesResponse, categoriesResponse] = await Promise.all([
-          incomeService.getIncomes(),
-          categoryService.getCategories('income')
-        ]);
-        
-        setIncomes(incomesResponse.data.incomes || []);
-        setCategories(categoriesResponse.data.categories || []);
-        
-        // Carregar todas as subcategorias para as categorias de receitas
-        if (categoriesResponse.data.categories && categoriesResponse.data.categories.length > 0) {
-          const allSubcategories = [];
-          for (const category of categoriesResponse.data.categories) {
-            try {
-              const subcategoriesResponse = await subcategoryService.getSubcategories(category.id);
-              if (subcategoriesResponse.data.subcategories) {
-                allSubcategories.push(...subcategoriesResponse.data.subcategories);
-              }
-            } catch (error) {
-              console.error(`Erro ao carregar subcategorias da categoria ${category.id}:`, error);
-            }
-          }
-          setSubcategories(allSubcategories);
-        }
-        
-        // Carregar contas bancárias
-        try {
-          const bankAccountsResponse = await bankAccountService.getBankAccounts();
-          const bankAccountsData = bankAccountsResponse.data?.bankAccounts || [];
-          console.log('📦 Contas bancárias carregadas:', bankAccountsData);
-          setBankAccounts(bankAccountsData);
-        } catch (error) {
-          console.error('Erro ao carregar contas bancárias:', error);
-          setBankAccounts([]);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-        toast.error('Erro ao carregar dados');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Filtrar categorias para mostrar apenas categorias de receitas
+  const incomeCategories = useMemo(() => {
+    return categories.filter(category => category.type === 'income');
+  }, [categories]);
 
-    fetchData();
-  }, []);
-
-  // Carregar subcategorias quando uma categoria é selecionada
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      if (formData.categoryId) {
-        try {
-          const response = await subcategoryService.getSubcategories(formData.categoryId);
-          setSubcategories(response.data.subcategories || []);
-        } catch (error) {
-          console.error('Erro ao carregar subcategorias:', error);
-        }
-      } else {
-        setSubcategories([]);
-      }
-    };
-
-    fetchSubcategories();
-  }, [formData.categoryId]);
+  // Filtrar subcategorias baseado na categoria selecionada
+  const filteredSubcategories = useMemo(() => {
+    if (!formData.categoryId) return [];
+    return subcategories.filter(sub => sub.categoryId === formData.categoryId);
+  }, [subcategories, formData.categoryId]);
 
   const filteredIncomes = useMemo(() => {
     return incomes.filter(income => {
@@ -458,7 +443,7 @@ const Incomes: React.FC = () => {
       
       // Filtro por data
       const matchesDueDate = !filters.dueDate || 
-        (income.receivedDate && new Date(income.receivedDate).toISOString().split('T')[0] === filters.dueDate);
+        (income.receivedDate && convertFirebaseDate(income.receivedDate).toISOString().split('T')[0] === filters.dueDate);
       
       // Filtro por status
       const matchesStatus = !filters.isReceived || 
@@ -478,28 +463,11 @@ const Incomes: React.FC = () => {
     }).format(value);
   };
 
-  const formatDate = (date: Date | string | { _seconds: number; _nanoseconds: number } | null | undefined) => {
+  const formatDate = (date: FirebaseDateType | null | undefined) => {
     if (!date) return '-';
     
     try {
-      let dateObj: Date;
-      
-      // Se for um objeto do Firebase (tem _seconds)
-      if (date && typeof date === 'object' && '_seconds' in date && typeof date._seconds === 'number') {
-        dateObj = new Date(date._seconds * 1000);
-      }
-      // Se for uma string
-      else if (typeof date === 'string') {
-        dateObj = new Date(date);
-      }
-      // Se já for uma instância de Date
-      else if (date instanceof Date) {
-        dateObj = date;
-      }
-      // Fallback
-      else {
-        return '-';
-      }
+      const dateObj = convertFirebaseDate(date);
       
       // Verificar se a data é válida
       if (isNaN(dateObj.getTime())) {
@@ -524,7 +492,7 @@ const Incomes: React.FC = () => {
     setFormData({
       description: '',
       amount: '',
-      receivedDate: '',
+      receivedDate: new Date().toISOString().split('T')[0], // Data atual como padrão
       categoryId: '',
       subcategoryId: '',
       tags: '',
@@ -560,17 +528,19 @@ const Incomes: React.FC = () => {
 
              if (editingIncome) {
          // Atualizar receita existente
-         await incomeService.updateIncome(editingIncome.id, incomeData);
+         const response = await incomeService.updateIncome(editingIncome.id, incomeData);
          toast.success('Receita atualizada com sucesso!');
-       } else {
-         // Criar nova receita
-         await incomeService.createIncome(incomeData);
-         toast.success('Receita criada com sucesso!');
-       }
-      
-      // Recarregar receitas
-      const response = await incomeService.getIncomes();
-      setIncomes(response.data.incomes || []);
+         
+         // Atualizar dados localmente com conta bancária atualizada
+         updateIncome(response.data.income, response.data.updatedBankAccount);
+      } else {
+        // Criar nova receita
+        const response = await incomeService.createIncome(incomeData);
+        toast.success('Receita criada com sucesso!');
+        
+        // Atualizar dados localmente
+        addIncome(response.data.income);
+      }
       
              // Limpar formulário e fechar modal
        resetForm();
@@ -585,41 +555,24 @@ const Incomes: React.FC = () => {
    const handleEditIncome = (income: Income) => {
      setEditingIncome(income);
      
-     // Preencher o formulário com os dados da receita
-     const formatDateForInput = (date: Date | string | { _seconds: number; _nanoseconds: number } | null | undefined) => {
-       if (!date) return '';
-       
-       let dateObj: Date;
-       
-       try {
-         // Se for um objeto do Firebase (tem _seconds)
-         if (date && typeof date === 'object' && '_seconds' in date && typeof date._seconds === 'number') {
-           dateObj = new Date(date._seconds * 1000);
-         }
-         // Se for uma string
-         else if (typeof date === 'string') {
-           dateObj = new Date(date);
-         }
-         // Se já for uma instância de Date
-         else if (date instanceof Date) {
-           dateObj = date;
-         }
-         // Fallback
-         else {
-           return '';
-         }
-         
-         // Verificar se a data é válida
-         if (isNaN(dateObj.getTime())) {
-           return '';
-         }
-         
-         return dateObj.toISOString().split('T')[0];
-       } catch (error) {
-         console.error('Erro ao formatar data para input:', error, date);
-         return '';
-       }
-     };
+    // Preencher o formulário com os dados da receita
+    const formatDateForInput = (date: FirebaseDateType | null | undefined) => {
+      if (!date) return '';
+      
+      try {
+        const dateObj = convertFirebaseDate(date);
+        
+        // Verificar se a data é válida
+        if (isNaN(dateObj.getTime())) {
+          return '';
+        }
+        
+        return dateObj.toISOString().split('T')[0];
+      } catch (error) {
+        console.error('Erro ao formatar data para input:', error, date);
+        return '';
+      }
+    };
      
      setFormData({
        description: income.description,
@@ -646,11 +599,10 @@ const Incomes: React.FC = () => {
        try {
          await incomeService.deleteIncome(income.id);
          
-         // Recarregar receitas
-         const response = await incomeService.getIncomes();
-         setIncomes(response.data.incomes || []);
-         
-         toast.success('Receita excluída com sucesso!');
+        // Atualizar dados localmente
+        removeIncome(income.id);
+        
+        toast.success('Receita excluída com sucesso!');
        } catch (error) {
          console.error('Erro ao excluir receita:', error);
          toast.error('Erro ao excluir receita');
@@ -667,9 +619,13 @@ const Incomes: React.FC = () => {
     
     // Se a conta está parcialmente recebida ou pendente, abrir modal de recebimento
     setViewingIncome(income);
+    
+    // Calcular o valor padrão (valor restante)
+    const remainingAmount = income.amount - (income.partialAmount || 0);
+    
     setPaymentData({
-      amount: '',
-      receivedDate: new Date().toISOString().split('T')[0],
+      amount: remainingAmount.toString(), // Valor integral restante como padrão
+      receivedDate: new Date().toISOString().split('T')[0], // Data atual como padrão
       isPartial: false
     });
     setIsPaymentModalOpen(true);
@@ -702,11 +658,10 @@ const Incomes: React.FC = () => {
         isPartial: paymentData.isPartial
       };
       
-      await incomeService.markAsReceived(viewingIncome.id, paymentInfo);
+      const response = await incomeService.markAsReceived(viewingIncome.id, paymentInfo);
       
-      // Recarregar receitas
-      const response = await incomeService.getIncomes();
-      setIncomes(response.data.incomes || []);
+      // Atualizar dados localmente
+      updateIncome(response.data.income);
       
       toast.success('Recebimento registrado com sucesso!');
       
@@ -794,7 +749,7 @@ const Incomes: React.FC = () => {
     };
   }, [filteredIncomes]);
 
-  if (loading) {
+  if (globalLoading) {
     return <GlobalLoading message="💰 Carregando Receitas" subtitle="Buscando suas receitas..." />;
   }
 
@@ -852,7 +807,7 @@ const Incomes: React.FC = () => {
             fullWidth
           >
             <option value="">Todas as categorias</option>
-            {categories.map(category => (
+            {incomeCategories.map(category => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
@@ -926,9 +881,9 @@ const Incomes: React.FC = () => {
                  <TableHeaderCell>Descrição</TableHeaderCell>
                  <TableHeaderCell>Categoria</TableHeaderCell>
                  <TableHeaderCellCenter>Valor</TableHeaderCellCenter>
-                 <TableHeaderCellCenter>Data Prevista</TableHeaderCellCenter>
+                 <TableHeaderCellCenter>Data Recebimento</TableHeaderCellCenter>
                  <TableHeaderCellCenter>Status</TableHeaderCellCenter>
-                 <TableHeaderCell>Conta Bancária</TableHeaderCell>
+                 <TableHeaderCellCenter>Conta Bancária</TableHeaderCellCenter>
                  <TableHeaderCellCenter>Ações</TableHeaderCellCenter>
                </TableRow>
             </TableHeader>
@@ -975,14 +930,14 @@ const Incomes: React.FC = () => {
 
                         </div>
                                         </TableCellStatus>
-                  <TableCell>
+                  <TableCellCenter>
                     <div>
                       {income.bankAccountId ? 
                         bankAccounts.find(acc => acc.id === income.bankAccountId)?.name || 'N/A' : 
                         'Não informado'
                       }
                     </div>
-                  </TableCell>
+                  </TableCellCenter>
                   <TableCellCenter>
                       <ActionsCell>
                         <ActionButton 
@@ -1089,7 +1044,7 @@ const Incomes: React.FC = () => {
                     required
                   >
                     <option value="">Selecione a categoria</option>
-                    {categories.map((category) => (
+                    {incomeCategories.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
                       </option>
@@ -1109,7 +1064,7 @@ const Incomes: React.FC = () => {
                     fullWidth
                   >
                     <option value="">Selecione a subcategoria (opcional)</option>
-                    {subcategories.map((subcategory) => (
+                    {filteredSubcategories.map((subcategory) => (
                       <option key={subcategory.id} value={subcategory.id}>
                         {subcategory.name}
                       </option>

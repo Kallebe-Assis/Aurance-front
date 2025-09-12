@@ -86,7 +86,7 @@ export const LineChart: React.FC<LineChartProps> = ({
             tick={{ fontSize: 12 }}
             tickLine={{ stroke: '#d1d5db' }}
             axisLine={{ stroke: '#d1d5db' }}
-            tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+            tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
           />
           <Tooltip content={<CustomTooltip />} />
           {showLegend && <Legend />}
