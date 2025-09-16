@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FiRepeat, FiArrowRight, FiTrash2, FiCalendar, FiDollarSign } from 'react-icons/fi';
 import { useData } from '../contexts/DataContext';
-import { transferService } from '../services/api';
+import { transferService } from '../services';
 import { Transfer } from '../types';
 import toast from 'react-hot-toast';
 

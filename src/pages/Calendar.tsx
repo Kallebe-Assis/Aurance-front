@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiChevronLeft, FiChevronRight, FiDollarSign, FiTrendingUp } from 'react-icons/fi';
-import { expenseService, incomeService } from '../services/api';
+import { expenseService, incomeService } from '../services';
 import { Expense, Income, FirebaseDateType, FirebaseTimestamp, FirebaseDate } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';

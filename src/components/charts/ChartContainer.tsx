@@ -45,7 +45,7 @@ const ChartContent = styled.div`
   justify-content: center;
 `;
 
-export const ChartContainer: React.FC<ChartContainerProps> = ({
+export const ChartContainer: React.FC<ChartContainerProps> = React.memo(({
   title,
   subtitle,
   children,
@@ -63,4 +63,4 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
       </ChartContent>
     </Container>
   );
-};
+});

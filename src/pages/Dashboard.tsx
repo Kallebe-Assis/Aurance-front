@@ -922,7 +922,7 @@ export default function Dashboard() {
       setRecalculateProgress(prev => prev + 1);
       
       // Chamar o serviço de recálculo do backend
-      const { reportService } = await import('../services/api');
+      const { reportService } = await import('../services');
       const result = await reportService.recalculateBalances();
       
       console.log('✅ Resultado do recálculo:', result);
@@ -1117,7 +1117,7 @@ export default function Dashboard() {
               <AccountItem key={account.id}>
                 <AccountInfo>
                   <AccountIcon color={color}>
-                    {account.name.charAt(0).toUpperCase()}
+                    {account.name?.charAt(0)?.toUpperCase() || '?'}
                   </AccountIcon>
                   <AccountDetails>
                     <AccountName>{account.name}</AccountName>
@@ -1171,7 +1171,7 @@ export default function Dashboard() {
                 <CreditCardItem key={card.id}>
                   <CreditCardInfo>
                     <CreditCardIcon color={color}>
-                      {card.name.charAt(0).toUpperCase()}
+                      {card.name?.charAt(0)?.toUpperCase() || '?'}
                     </CreditCardIcon>
                     <CreditCardDetails>
                       <CreditCardName>{card.name}</CreditCardName>
@@ -1258,7 +1258,7 @@ export default function Dashboard() {
                     <CategoryItem key={category.name}>
                       <CategoryInfo>
                         <CategoryIcon color={category.color}>
-                          {category.name.charAt(0).toUpperCase()}
+                          {category.name?.charAt(0)?.toUpperCase() || '?'}
                         </CategoryIcon>
                         <CategoryDetails>
                           <CategoryName>{category.name}</CategoryName>

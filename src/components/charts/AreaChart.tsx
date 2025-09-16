@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AreaChart as RechartsAreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ChartContainer } from './ChartContainer';
 
@@ -49,7 +49,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const AreaChart: React.FC<AreaChartProps> = ({
+export const AreaChart: React.FC<AreaChartProps> = React.memo(({
   data,
   title,
   subtitle,
@@ -106,4 +106,4 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       </ResponsiveContainer>
     </ChartContainer>
   );
-};
+});

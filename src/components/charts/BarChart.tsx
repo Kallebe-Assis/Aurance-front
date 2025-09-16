@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ChartContainer } from './ChartContainer';
 
@@ -49,7 +49,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const BarChart: React.FC<BarChartProps> = ({
+export const BarChart: React.FC<BarChartProps> = React.memo(({
   data,
   title,
   subtitle,
@@ -60,18 +60,20 @@ export const BarChart: React.FC<BarChartProps> = ({
   showGrid = true,
   xAxisKey = 'name'
 }) => {
-  // Validar e limpar dados
-  const cleanData = data?.filter(item => {
-    if (!item || !item.name || item.name === 'Invalid Date') return false;
-    
-    // Verificar se pelo menos um dos valores de dataKeys é válido
-    const hasValidValue = dataKeys.some(key => {
-      const value = item[key];
-      return typeof value === 'number' && !isNaN(value) && value >= 0;
-    });
-    
-    return hasValidValue;
-  }) || [];
+  // Validar e limpar dados com useMemo para otimização
+  const cleanData = useMemo(() => {
+    return data?.filter(item => {
+      if (!item || !item.name || item.name === 'Invalid Date') return false;
+      
+      // Verificar se pelo menos um dos valores de dataKeys é válido
+      const hasValidValue = dataKeys.some(key => {
+        const value = item[key];
+        return typeof value === 'number' && !isNaN(value) && value >= 0;
+      });
+      
+      return hasValidValue;
+    }) || [];
+  }, [data, dataKeys]);
   
   
   if (!cleanData || cleanData.length === 0) {
@@ -120,4 +122,4 @@ export const BarChart: React.FC<BarChartProps> = ({
       </ResponsiveContainer>
     </ChartContainer>
   );
-};
+});

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { ChartContainer } from './ChartContainer';
 
@@ -83,7 +83,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const PieChart: React.FC<PieChartProps> = ({
+export const PieChart: React.FC<PieChartProps> = React.memo(({
   data,
   title,
   subtitle,
@@ -153,4 +153,4 @@ export const PieChart: React.FC<PieChartProps> = ({
       </ResponsiveContainer>
     </ChartContainer>
   );
-};
+});

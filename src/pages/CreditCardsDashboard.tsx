@@ -526,7 +526,7 @@ export default function CreditCardsDashboard() {
               <CardItem key={card.id}>
                 <CardInfo>
                   <CardIconItem color={color}>
-                    {card.name.charAt(0).toUpperCase()}
+                    {card.name?.charAt(0)?.toUpperCase() || '?'}
                   </CardIconItem>
                   <CardDetails>
                     <CardName>{card.name}</CardName>

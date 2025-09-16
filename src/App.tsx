@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { GlobalStyles } from './styles/GlobalStyles';
@@ -6,19 +6,34 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import Layout from './components/layout/Layout';
 import InitialLoading from './components/InitialLoading';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Expenses from './pages/Expenses';
-import Incomes from './pages/Incomes';
-import CreditCards from './pages/CreditCards';
-import CreditCardsDashboard from './pages/CreditCardsDashboard';
-import BankAccounts from './pages/BankAccounts';
-import Categories from './pages/Categories';
-import Calendar from './pages/Calendar';
-import Settings from './pages/Settings';
-import Profile from './pages/Profile';
-import Transfers from './pages/Transfers';
+
+// Lazy loading de componentes
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Expenses = lazy(() => import('./pages/Expenses'));
+const Incomes = lazy(() => import('./pages/Incomes'));
+const CreditCards = lazy(() => import('./pages/CreditCards'));
+const CreditCardsDashboard = lazy(() => import('./pages/CreditCardsDashboard'));
+const BankAccounts = lazy(() => import('./pages/BankAccounts'));
+const Categories = lazy(() => import('./pages/Categories'));
+const Calendar = lazy(() => import('./pages/Calendar'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Transfers = lazy(() => import('./pages/Transfers'));
+
+// Componente de loading para Suspense
+const PageLoading: React.FC = () => (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    backgroundColor: 'var(--gray-200)'
+  }}>
+    <InitialLoading />
+  </div>
+);
 
 // Componente para rotas protegidas
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,103 +55,127 @@ const AppContent: React.FC = () => {
   return (
     <Router>
       <GlobalStyles />
-      <Routes>
-        {/* Rotas públicas */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        
-        {/* Rotas protegidas */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Layout>
-              <Dashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/expenses" element={
-          <ProtectedRoute>
-            <Layout>
-              <Expenses />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/incomes" element={
-          <ProtectedRoute>
-            <Layout>
-              <Incomes />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/credit-cards" element={
-          <ProtectedRoute>
-            <Layout>
-              <CreditCards />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/credit-cards-dashboard" element={
-          <ProtectedRoute>
-            <Layout>
-              <CreditCardsDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/bank-accounts" element={
-          <ProtectedRoute>
-            <Layout>
-              <BankAccounts />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/categories" element={
-          <ProtectedRoute>
-            <Layout>
-              <Categories />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/transfers" element={
-          <ProtectedRoute>
-            <Layout>
-              <Transfers />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/calendar" element={
-          <ProtectedRoute>
-            <Layout>
-              <Calendar />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Layout>
-              <Settings />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Layout>
-              <Profile />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        
-        {/* Redirecionar rotas não encontradas */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          {/* Rotas públicas */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Rotas protegidas */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Dashboard />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/expenses" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Expenses />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/incomes" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Incomes />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/credit-cards" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <CreditCards />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/credit-cards-dashboard" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <CreditCardsDashboard />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/bank-accounts" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <BankAccounts />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/categories" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Categories />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/transfers" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Transfers />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/calendar" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Calendar />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Settings />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Layout>
+                <Suspense fallback={<PageLoading />}>
+                  <Profile />
+                </Suspense>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          {/* Redirecionar rotas não encontradas */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
       
       <Toaster
         position="top-right"

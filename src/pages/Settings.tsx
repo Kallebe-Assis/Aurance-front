@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FiUser, FiShield, FiBell, FiCreditCard, FiDollarSign, FiSave, FiLogOut } from 'react-icons/fi';
-import { userService } from '../services/api';
+import { FiUser, FiShield, FiBell, FiCreditCard, FiDollarSign, FiSave, FiLogOut, FiTrash2, FiAlertTriangle } from 'react-icons/fi';
+import { userService } from '../services';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
 import toast from 'react-hot-toast';
@@ -242,6 +242,181 @@ const LoadingContainer = styled.div`
   color: var(--text-secondary);
 `;
 
+// Estilos para o botão de exclusão total
+const DangerSection = styled(SettingsSection)`
+  border: 2px solid var(--error-color);
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+`;
+
+const DangerHeader = styled(SectionHeader)`
+  color: var(--error-color);
+  border-bottom-color: var(--error-color);
+`;
+
+const DangerButton = styled.button`
+  background: linear-gradient(135deg, var(--error-color) 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+  
+  &:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(239, 68, 68, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+// Modal de confirmação
+const Modal = styled.div<{ isOpen: boolean }>`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  opacity: ${({ isOpen }) => isOpen ? 1 : 0};
+  visibility: ${({ isOpen }) => isOpen ? 'visible' : 'hidden'};
+  transition: all 0.3s ease;
+`;
+
+const ModalContent = styled.div`
+  background-color: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  border: 2px solid var(--error-color);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  color: var(--error-color);
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0;
+  color: var(--error-color);
+`;
+
+const ModalBody = styled.div`
+  margin-bottom: var(--spacing-lg);
+`;
+
+const WarningText = styled.p`
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  line-height: var(--line-height-relaxed);
+`;
+
+const ConfirmationInput = styled.input`
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-md);
+  transition: border-color 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--error-color);
+  }
+  
+  &.error {
+    border-color: var(--error-color);
+    background-color: #fef2f2;
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+`;
+
+const CancelButton = styled.button`
+  background: var(--gray-100);
+  color: var(--text-primary);
+  border: 1px solid var(--gray-300);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--gray-200);
+  }
+`;
+
+const ConfirmButton = styled.button`
+  background: var(--error-color);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #dc2626;
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const ProgressIndicator = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+`;
+
+const ProgressDot = styled.div<{ active: boolean; completed: boolean }>`
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: ${({ active, completed }) => 
+    completed ? 'var(--success-color)' : 
+    active ? 'var(--error-color)' : 'var(--gray-300)'
+  };
+  transition: all 0.3s ease;
+`;
+
 const Settings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -260,6 +435,34 @@ const Settings: React.FC = () => {
     expenseReminders: true,
     goalReminders: true
   });
+
+  // Estados para o modal de exclusão total
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmationStep, setConfirmationStep] = useState(0);
+  const [confirmationText, setConfirmationText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Textos de confirmação
+  const confirmationSteps = [
+    {
+      title: "⚠️ PRIMEIRA CONFIRMAÇÃO",
+      message: "Você está prestes a EXCLUIR PERMANENTEMENTE todos os seus dados. Esta ação é IRREVERSÍVEL!",
+      inputPlaceholder: "Digite 'EXCLUIR TUDO' para continuar",
+      expectedInput: "EXCLUIR TUDO"
+    },
+    {
+      title: "🚨 SEGUNDA CONFIRMAÇÃO",
+      message: "Todos os seus dados serão PERDIDOS para sempre: despesas, receitas, contas bancárias, cartões, transferências, categorias...",
+      inputPlaceholder: "Digite 'TENHO CERTEZA' para continuar",
+      expectedInput: "TENHO CERTEZA"
+    },
+    {
+      title: "💀 CONFIRMAÇÃO FINAL",
+      message: "Esta é sua ÚLTIMA CHANCE de cancelar. Após clicar em 'CONFIRMAR EXCLUSÃO', não há volta. Todos os dados serão apagados do servidor permanentemente.",
+      inputPlaceholder: "Digite 'CONFIRMO EXCLUSÃO' para continuar",
+      expectedInput: "CONFIRMO EXCLUSÃO"
+    }
+  ];
 
   // Carregar dados do usuário
   useEffect(() => {
@@ -319,6 +522,81 @@ const Settings: React.FC = () => {
         toast.error('Erro ao excluir conta');
       }
     }
+  };
+
+  // Funções para o modal de exclusão total
+  const openDeleteModal = () => {
+    setShowDeleteModal(true);
+    setConfirmationStep(0);
+    setConfirmationText('');
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setConfirmationStep(0);
+    setConfirmationText('');
+    setIsDeleting(false);
+  };
+
+  const handleConfirmationInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setConfirmationText(e.target.value);
+  };
+
+  const handleNextStep = () => {
+    const currentStep = confirmationSteps[confirmationStep];
+    if (confirmationText.trim() === currentStep.expectedInput) {
+      if (confirmationStep < confirmationSteps.length - 1) {
+        setConfirmationStep(confirmationStep + 1);
+        setConfirmationText('');
+      } else {
+        // Última confirmação - executar exclusão
+        executeTotalDeletion();
+      }
+    } else {
+      toast.error('Texto de confirmação incorreto!');
+    }
+  };
+
+  const executeTotalDeletion = async () => {
+    try {
+      setIsDeleting(true);
+      
+      let result;
+      
+      try {
+        // Primeiro, tentar o método normal
+        console.log('🔄 Tentando exclusão normal...');
+        result = await userService.deleteAllData();
+        console.log('✅ Resultado da exclusão normal:', result);
+      } catch (normalError) {
+        console.warn('⚠️ Método normal falhou, tentando método agressivo...', normalError);
+        
+        // Se o método normal falhar, tentar o método agressivo
+        result = await userService.deleteAllDataAggressive();
+        console.log('✅ Resultado da exclusão agressiva:', result);
+      }
+      
+      // Limpar todos os dados locais
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      toast.success('Todos os dados foram excluídos permanentemente!');
+      
+      // Redirecionar para login
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ Erro ao excluir todos os dados:', error);
+      toast.error('Erro ao excluir dados. Tente novamente.');
+      setIsDeleting(false);
+    }
+  };
+
+  const isConfirmationValid = () => {
+    const currentStep = confirmationSteps[confirmationStep];
+    return confirmationText.trim() === currentStep.expectedInput;
   };
 
   const handleLogout = async () => {
@@ -523,6 +801,42 @@ const Settings: React.FC = () => {
           </div>
         </SettingsSection>
 
+        {/* Exclusão Total - EXTREMAMENTE PERIGOSO */}
+        <DangerSection>
+          <DangerHeader>
+            <SectionIcon color="var(--error-color)">
+              <FiAlertTriangle />
+            </SectionIcon>
+            <SectionTitle>⚠️ EXCLUSÃO TOTAL DE DADOS</SectionTitle>
+          </DangerHeader>
+          
+          <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+            <WarningText>
+              <strong>🚨 ATENÇÃO: ESTA AÇÃO É EXTREMAMENTE PERIGOSA! 🚨</strong>
+            </WarningText>
+            <WarningText>
+              Esta função irá <strong>EXCLUIR PERMANENTEMENTE</strong> todos os seus dados:
+            </WarningText>
+            <ul style={{ margin: 'var(--spacing-md) 0', paddingLeft: 'var(--spacing-lg)' }}>
+              <li>💰 Todas as despesas e receitas</li>
+              <li>🏦 Todas as contas bancárias</li>
+              <li>💳 Todos os cartões de crédito</li>
+              <li>🔄 Todas as transferências</li>
+              <li>📊 Todas as categorias e subcategorias</li>
+              <li>📈 Todos os relatórios e estatísticas</li>
+              <li>👤 Sua conta de usuário</li>
+            </ul>
+            <WarningText style={{ color: 'var(--error-color)', fontWeight: 'bold' }}>
+              ⚠️ Esta ação é <strong>IRREVERSÍVEL</strong> e não pode ser desfeita! ⚠️
+            </WarningText>
+          </div>
+          
+          <DangerButton onClick={openDeleteModal} disabled={isDeleting}>
+            <FiTrash2 />
+            {isDeleting ? 'EXCLUINDO...' : 'EXCLUIR TUDO PERMANENTEMENTE'}
+          </DangerButton>
+        </DangerSection>
+
         {/* Zona de Perigo */}
         <DangerZone>
           <DangerTitle>
@@ -544,6 +858,62 @@ const Settings: React.FC = () => {
           </div>
         </DangerZone>
       </SettingsGrid>
+
+      {/* Modal de Confirmação de Exclusão Total */}
+      <Modal isOpen={showDeleteModal} onClick={closeDeleteModal}>
+        <ModalContent onClick={(e) => e.stopPropagation()}>
+          <ModalHeader>
+            <FiAlertTriangle size={24} />
+            <ModalTitle>{confirmationSteps[confirmationStep]?.title}</ModalTitle>
+          </ModalHeader>
+          
+          <ModalBody>
+            <ProgressIndicator>
+              {confirmationSteps.map((_, index) => (
+                <ProgressDot
+                  key={index}
+                  active={index === confirmationStep}
+                  completed={index < confirmationStep}
+                />
+              ))}
+            </ProgressIndicator>
+            
+            <WarningText>
+              {confirmationSteps[confirmationStep]?.message}
+            </WarningText>
+            
+            <ConfirmationInput
+              type="text"
+              value={confirmationText}
+              onChange={handleConfirmationInput}
+              placeholder={confirmationSteps[confirmationStep]?.inputPlaceholder}
+              className={confirmationText && !isConfirmationValid() ? 'error' : ''}
+              disabled={isDeleting}
+              autoFocus
+            />
+            
+            {confirmationText && !isConfirmationValid() && (
+              <WarningText style={{ color: 'var(--error-color)', fontSize: '0.875rem' }}>
+                ❌ Texto incorreto! Digite exatamente: "{confirmationSteps[confirmationStep]?.expectedInput}"
+              </WarningText>
+            )}
+          </ModalBody>
+          
+          <ModalActions>
+            <CancelButton onClick={closeDeleteModal} disabled={isDeleting}>
+              Cancelar
+            </CancelButton>
+            <ConfirmButton
+              onClick={handleNextStep}
+              disabled={!isConfirmationValid() || isDeleting}
+            >
+              {isDeleting ? 'EXCLUINDO...' : 
+               confirmationStep === confirmationSteps.length - 1 ? 'CONFIRMAR EXCLUSÃO TOTAL' : 
+               'Continuar'}
+            </ConfirmButton>
+          </ModalActions>
+        </ModalContent>
+      </Modal>
     </SettingsContainer>
   );
 };

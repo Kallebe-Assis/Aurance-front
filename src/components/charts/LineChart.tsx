@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ChartContainer } from './ChartContainer';
 
@@ -49,7 +49,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const LineChart: React.FC<LineChartProps> = ({
+export const LineChart: React.FC<LineChartProps> = React.memo(({
   data,
   title,
   subtitle,
@@ -105,4 +105,4 @@ export const LineChart: React.FC<LineChartProps> = ({
       </ResponsiveContainer>
     </ChartContainer>
   );
-};
+});

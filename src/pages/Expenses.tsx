@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiPlus, FiSearch, FiEye, FiEdit, FiTrash2 } from 'react-icons/fi';
-import { expenseService } from '../services/api';
+import { expenseService } from '../services';
 import { Expense } from '../types';
 import Button from '../components/common/Button';
 import { Input, Select, TextArea } from '../components/common/Input';

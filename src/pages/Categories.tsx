@@ -10,7 +10,7 @@ import {
   FiAward, FiTarget, FiFlag, FiLayers, FiGrid, FiBox, FiPackage,
   FiNavigation, FiNavigation2, FiBarChart, FiPieChart, FiFileText, FiImage
 } from 'react-icons/fi';
-import { categoryService, subcategoryService } from '../services/api';
+import { categoryService, subcategoryService } from '../services';
 import { Category, Subcategory } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';

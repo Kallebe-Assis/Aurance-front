@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiPlus, FiTarget, FiEdit, FiTrash2, FiCheck } from 'react-icons/fi';
-import { goalService } from '../services/api';
+import { goalService } from '../services';
 import { Goal } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';

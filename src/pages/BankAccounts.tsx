@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiPlus, FiDollarSign, FiTrendingUp, FiEdit, FiTrash2, FiEye, FiX, FiCreditCard } from 'react-icons/fi';
-import { bankAccountService, categoryService } from '../services/api';
+import { bankAccountService, categoryService } from '../services';
 import { BankAccount, Category } from '../types';
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
@@ -803,10 +803,10 @@ const BankAccounts: React.FC = () => {
               <AccountHeader>
                 <AccountInfo>
                   <AccountIcon color={account.color || '#3B82F6'}>
-                    {account.name.charAt(0).toUpperCase()}
+                    {account.name?.charAt(0)?.toUpperCase() || '?'}
                   </AccountIcon>
                   <AccountDetails>
-                    <AccountName>{account.name}</AccountName>
+                    <AccountName>{account.name || 'Nome não informado'}</AccountName>
                     <AccountType>{getAccountTypeLabel(account.accountType)}</AccountType>
                   </AccountDetails>
                 </AccountInfo>
@@ -888,9 +888,9 @@ const BankAccounts: React.FC = () => {
                   <DetailValue>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <AccountIcon color={selectedAccount.color || '#3B82F6'}>
-                        {selectedAccount.name.charAt(0).toUpperCase()}
+                        {selectedAccount.name?.charAt(0)?.toUpperCase() || '?'}
                       </AccountIcon>
-                      {selectedAccount.name}
+                      {selectedAccount.name || 'Nome não informado'}
                     </div>
                   </DetailValue>
                 </DetailRow>

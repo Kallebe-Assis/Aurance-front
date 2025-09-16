@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiPlus, FiCreditCard, FiDollarSign, FiCalendar, FiTrendingUp, FiEdit, FiTrash2, FiEye, FiX, FiShoppingCart, FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiRefreshCw } from 'react-icons/fi';
-import { creditCardService, expenseService, categoryService, subcategoryService, bankAccountService } from '../services/api';
+import { creditCardService, expenseService, categoryService, subcategoryService, bankAccountService } from '../services';
 import { expenseCardService } from '../services/expenseCardService';
 import { CreditCard, Expense, ExpenseCard, Category, Subcategory, BankAccount } from '../types';
 import Button from '../components/common/Button';
@@ -1209,7 +1209,7 @@ const CreditCards: React.FC = () => {
         recalculateStats(creditCards, expenses);
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao atualizar valores dos cartões:', error);
     }
   };
@@ -1227,7 +1227,7 @@ const CreditCards: React.FC = () => {
         updateCardValuesOnly(newMonth),
         new Promise(resolve => setTimeout(resolve, 300)) // Mínimo 300ms
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao alterar mês:', error);
     } finally {
       setIsChangingMonth(false);
@@ -1248,7 +1248,7 @@ const CreditCards: React.FC = () => {
         new Promise(resolve => setTimeout(resolve, 300)) // Mínimo 300ms
       ]);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao ir para hoje:', error);
     } finally {
       setIsChangingMonth(false);
@@ -1300,7 +1300,7 @@ const CreditCards: React.FC = () => {
       if (expenses.length > 0) {
         recalculateStats(creditCards, expenses);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar cartões:', error);
       setStats({ totalCards: 0, totalLimit: 0, totalUsed: 0, totalAvailable: 0 });
       toast.error('Erro ao carregar cartões de crédito');
@@ -1317,7 +1317,7 @@ const CreditCards: React.FC = () => {
         const accounts = response.data.bankAccounts || response.data;
         setBankAccounts(accounts);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao carregar contas bancárias:', error);
     } finally {
       setIsLoadingBankAccounts(false);
@@ -1342,7 +1342,7 @@ const CreditCards: React.FC = () => {
         console.log('⚠️ Estrutura de resposta inesperada:', response);
         setCategories([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao carregar categorias:', error);
       setCategories([]);
     } finally {
@@ -1371,7 +1371,7 @@ const CreditCards: React.FC = () => {
         console.error('❌ Erro ao criar categorias padrão:', result.message);
         toast.error(result.message || 'Erro ao criar categorias padrão');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao criar categorias padrão:', error);
       toast.error('Erro ao criar categorias padrão');
     }
@@ -1382,7 +1382,7 @@ const CreditCards: React.FC = () => {
       const response = await subcategoryService.getSubcategories(categoryId);
       const subcategories = response?.data?.subcategories || response?.data || [];
       setSubcategories(Array.isArray(subcategories) ? subcategories : []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar subcategorias:', error);
       setSubcategories([]);
     }
@@ -1397,7 +1397,7 @@ const CreditCards: React.FC = () => {
         : new Date(date as string | Date);
       
       return isNaN(dateObj.getTime()) ? '-' : dateObj.toLocaleDateString('pt-BR');
-    } catch (error) {
+    } catch (error: any) {
       return '-';
     }
   };
@@ -1496,7 +1496,7 @@ const CreditCards: React.FC = () => {
       if (creditCards.length > 0) {
         recalculateStats(creditCards, [...normalExpenses, ...creditCardExpenses]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao carregar despesas:', error);
       console.error('❌ Detalhes do erro:', error);
     } finally {
@@ -1522,7 +1522,7 @@ const CreditCards: React.FC = () => {
       await fetchExpenses();
       
       toast.success('Faturas recalculadas com sucesso!', { id: 'refresh' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao atualizar dados:', error);
       toast.error('Erro ao recalcular faturas', { id: 'refresh' });
     }
@@ -1557,30 +1557,40 @@ const CreditCards: React.FC = () => {
         closingDate: parseInt(formData.closingDate) || 1,
         dueDate: parseInt(formData.dueDate) || 1,
         color: formData.color,
-        bank: formData.bank,
-        lastFourDigits: formData.lastFourDigits,
+        bank: formData.bank || undefined,
+        lastFourDigits: formData.lastFourDigits || undefined,
         interestRate: parseFloat(formData.interestRate) || 0,
         installmentInterestRate: parseFloat(formData.installmentInterestRate) || 0,
         advanceDiscountRate: parseFloat(formData.advanceDiscountRate) || 0,
         annualFee: parseFloat(formData.annualFee) || 0
       };
 
+      console.log('📦 Dados do cartão sendo enviados:', cardData);
+      console.log('📦 FormData original:', formData);
+
       if (modalType === 'create') {
         const response = await creditCardService.createCreditCard(cardData);
+        console.log('✅ Resposta da criação:', response);
         toast.success('Cartão criado com sucesso!');
         // Adicionar cartão ao contexto global
         addCreditCard(response.data);
       } else if (modalType === 'edit' && editingCardId) {
         const response = await creditCardService.updateCreditCard(editingCardId, cardData);
+        console.log('✅ Resposta da atualização:', response);
         toast.success('Cartão atualizado com sucesso!');
         // Atualizar cartão no contexto global
         updateCreditCard(response.data);
       }
 
       closeModal();
-    } catch (error) {
-      console.error('Erro ao salvar cartão:', error);
-      toast.error('Erro ao salvar cartão');
+    } catch (error: any) {
+      console.error('❌ Erro ao salvar cartão:', error);
+      console.error('❌ Detalhes do erro:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
+      toast.error(`Erro ao salvar cartão: ${error?.response?.data?.error?.message || error?.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -1591,7 +1601,7 @@ const CreditCards: React.FC = () => {
         toast.success('Cartão deletado com sucesso!');
         // Remover cartão do contexto global
         removeCreditCard(cardId);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao deletar cartão:', error);
         toast.error('Erro ao deletar cartão');
       }
@@ -1731,7 +1741,7 @@ const CreditCards: React.FC = () => {
       setIsExpenseModalOpen(false);
       setSelectedCardForExpense(null);
       setEditingExpense(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao salvar despesa:', error);
       toast.error('Erro ao salvar despesa');
     } finally {
@@ -1773,7 +1783,7 @@ const CreditCards: React.FC = () => {
         }
         
         return dateObj.toISOString().split('T')[0];
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao formatar data para input:', error, date);
         return '';
       }
@@ -1815,7 +1825,7 @@ const CreditCards: React.FC = () => {
         
         await fetchExpenses();
         await fetchCreditCards();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao deletar despesa:', error);
         toast.error('Erro ao deletar despesa');
       }
@@ -1939,7 +1949,7 @@ const CreditCards: React.FC = () => {
         description: ''
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao processar pagamento:', error);
       toast.error('Erro ao processar pagamento');
     } finally {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import styled from 'styled-components';
 import { FiPlus, FiEye, FiEdit, FiTrash2, FiDollarSign } from 'react-icons/fi';
-import { incomeService } from '../services/api';
+import { incomeService } from '../services/incomes';
 import { Income, FirebaseDateType, FirebaseTimestamp, FirebaseDate } from '../types';
 import Button from '../components/common/Button';
 import { Input, Select, TextArea } from '../components/common/Input';
@@ -413,17 +413,17 @@ const Incomes: React.FC = () => {
 
   // Filtrar categorias para mostrar apenas categorias de receitas
   const incomeCategories = useMemo(() => {
-    return categories.filter(category => category.type === 'income');
+    return categories.filter((category: any) => category.type === 'income');
   }, [categories]);
 
   // Filtrar subcategorias baseado na categoria selecionada
   const filteredSubcategories = useMemo(() => {
     if (!formData.categoryId) return [];
-    return subcategories.filter(sub => sub.categoryId === formData.categoryId);
+    return subcategories.filter((sub: any) => sub.categoryId === formData.categoryId);
   }, [subcategories, formData.categoryId]);
 
   const filteredIncomes = useMemo(() => {
-    return incomes.filter(income => {
+    return incomes.filter((income: any) => {
       // Filtro por descrição
       const matchesDescription = !filters.description || 
         income.description.toLowerCase().includes(filters.description.toLowerCase()) ||
@@ -703,39 +703,39 @@ const Incomes: React.FC = () => {
   const getSubcategoryName = (subcategoryId: string) => {
     if (!subcategoryId) return '';
     
-    const subcategory = subcategories.find(sub => sub.id === subcategoryId);
+    const subcategory = subcategories.find((sub: any) => sub.id === subcategoryId);
     return subcategory ? subcategory.name : '';
   };
 
   // Calcular estatísticas dos filtros
   const dashboardStats = useMemo(() => {
     const totalIncomes = filteredIncomes.length;
-    const receivedIncomes = filteredIncomes.filter(income => income.isReceived).length;
-    const partialIncomes = filteredIncomes.filter(income => income.isPartial).length;
-    const pendingIncomes = filteredIncomes.filter(income => !income.isReceived && !income.isPartial).length;
+    const receivedIncomes = filteredIncomes.filter((income: any) => income.isReceived).length;
+    const partialIncomes = filteredIncomes.filter((income: any) => income.isPartial).length;
+    const pendingIncomes = filteredIncomes.filter((income: any) => !income.isReceived && !income.isPartial).length;
     
-    const totalAmount = filteredIncomes.reduce((sum, income) => sum + income.amount, 0);
+    const totalAmount = filteredIncomes.reduce((sum: number, income: any) => sum + income.amount, 0);
     
     // Valor total recebido: receitas totalmente recebidas + valores parciais das receitas parciais
     const receivedAmount = filteredIncomes
-      .filter(income => income.isReceived)
-      .reduce((sum, income) => sum + income.amount, 0) +
+      .filter((income: any) => income.isReceived)
+      .reduce((sum: number, income: any) => sum + income.amount, 0) +
       filteredIncomes
-        .filter(income => income.isPartial)
-        .reduce((sum, income) => sum + (income.partialAmount || 0), 0);
+        .filter((income: any) => income.isPartial)
+        .reduce((sum: number, income: any) => sum + (income.partialAmount || 0), 0);
     
     // Valor total em recebimentos parciais
     const partialAmount = filteredIncomes
-      .filter(income => income.isPartial)
-      .reduce((sum, income) => sum + (income.partialAmount || 0), 0);
+      .filter((income: any) => income.isPartial)
+      .reduce((sum: number, income: any) => sum + (income.partialAmount || 0), 0);
     
     // Valor total pendente: receitas não recebidas + valores restantes das receitas parciais
     const pendingAmount = filteredIncomes
-      .filter(income => !income.isReceived && !income.isPartial)
-      .reduce((sum, income) => sum + income.amount, 0) +
+      .filter((income: any) => !income.isReceived && !income.isPartial)
+      .reduce((sum: number, income: any) => sum + income.amount, 0) +
       filteredIncomes
-        .filter(income => income.isPartial)
-        .reduce((sum, income) => sum + (income.amount - (income.partialAmount || 0)), 0);
+        .filter((income: any) => income.isPartial)
+        .reduce((sum: number, income: any) => sum + (income.amount - (income.partialAmount || 0)), 0);
     
     return {
       totalIncomes,
@@ -807,7 +807,7 @@ const Incomes: React.FC = () => {
             fullWidth
           >
             <option value="">Todas as categorias</option>
-            {incomeCategories.map(category => (
+            {incomeCategories.map((category: any) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
@@ -887,8 +887,8 @@ const Incomes: React.FC = () => {
                  <TableHeaderCellCenter>Ações</TableHeaderCellCenter>
                </TableRow>
             </TableHeader>
-            <tbody>
-              {filteredIncomes.map((income) => (
+            <tbody>npm 
+              {filteredIncomes.map((income: any) => (
                 <TableRow key={income.id}>
                                     <TableCell>
                     <div>
@@ -902,7 +902,7 @@ const Incomes: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div>{categories.find(cat => cat.id === income.categoryId)?.name || income.categoryId}</div>
+                      <div>{categories.find((cat: any) => cat.id === income.categoryId)?.name || income.categoryId}</div>
                       {income.subcategoryId && (
                         <small style={{ color: 'var(--text-secondary)' }}>
                           {getSubcategoryName(income.subcategoryId)}
@@ -933,7 +933,7 @@ const Incomes: React.FC = () => {
                   <TableCellCenter>
                     <div>
                       {income.bankAccountId ? 
-                        bankAccounts.find(acc => acc.id === income.bankAccountId)?.name || 'N/A' : 
+                        bankAccounts.find((acc: any) => acc.id === income.bankAccountId)?.name || 'N/A' : 
                         'Não informado'
                       }
                     </div>
@@ -1044,7 +1044,7 @@ const Incomes: React.FC = () => {
                     required
                   >
                     <option value="">Selecione a categoria</option>
-                    {incomeCategories.map((category) => (
+                    {incomeCategories.map((category: any) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
                       </option>
@@ -1064,7 +1064,7 @@ const Incomes: React.FC = () => {
                     fullWidth
                   >
                     <option value="">Selecione a subcategoria (opcional)</option>
-                    {filteredSubcategories.map((subcategory) => (
+                    {filteredSubcategories.map((subcategory: any) => (
                       <option key={subcategory.id} value={subcategory.id}>
                         {subcategory.name}
                       </option>
@@ -1081,7 +1081,7 @@ const Incomes: React.FC = () => {
                     fullWidth
                   >
                     <option value="">Selecione a conta bancária (opcional)</option>
-                    {bankAccounts.map((account) => (
+                    {bankAccounts.map((account: any) => (
                       <option key={account.id} value={account.id}>
                         {account.name}
                       </option>
@@ -1213,7 +1213,7 @@ const Incomes: React.FC = () => {
                        Categoria
                      </h4>
                      <p style={{ margin: 0, fontSize: '1rem', fontWeight: '500' }}>
-                       {categories.find(cat => cat.id === viewingIncome.categoryId)?.name || viewingIncome.categoryId}
+                       {categories.find((cat: any) => cat.id === viewingIncome.categoryId)?.name || viewingIncome.categoryId}
                      </p>
                    </div>
                    
@@ -1223,7 +1223,7 @@ const Incomes: React.FC = () => {
                          Subcategoria
                        </h4>
                        <p style={{ margin: 0, fontSize: '1rem', fontWeight: '500' }}>
-                         {subcategories.find(sub => sub.id === viewingIncome.subcategoryId)?.name || viewingIncome.subcategoryId}
+                         {subcategories.find((sub: any) => sub.id === viewingIncome.subcategoryId)?.name || viewingIncome.subcategoryId}
                        </p>
                      </div>
                    )}
@@ -1234,7 +1234,7 @@ const Incomes: React.FC = () => {
                      </h4>
                      <p style={{ margin: 0, fontSize: '1rem', fontWeight: '500' }}>
                        {viewingIncome.bankAccountId ? 
-                         bankAccounts.find(acc => acc.id === viewingIncome.bankAccountId)?.name || 'N/A' : 
+                         bankAccounts.find((acc: any) => acc.id === viewingIncome.bankAccountId)?.name || 'N/A' : 
                          'Não informado'
                        }
                      </p>
