@@ -419,3 +419,36 @@ export interface Notification {
   createdAt: Date;
 }
 
+// Tipos para transferências
+export interface Transfer {
+  id: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  description?: string;
+  transferDate: Date | string;
+  userId: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface TransferFormData {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  description?: string;
+  transferDate?: Date;
+}
+
+export interface TransferFilters {
+  fromAccountId?: string;
+  toAccountId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+

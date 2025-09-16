@@ -5,7 +5,8 @@ import {
   categoryService, 
   subcategoryService, 
   bankAccountService, 
-  creditCardService 
+  creditCardService,
+  transferService
 } from '../services/api';
 import { 
   Expense, 
@@ -13,7 +14,8 @@ import {
   Category, 
   Subcategory, 
   BankAccount, 
-  CreditCard 
+  CreditCard,
+  Transfer
 } from '../types';
 import { useAuth } from './AuthContext';
 import GlobalDataLoading from '../components/GlobalDataLoading';
@@ -28,6 +30,7 @@ interface DataContextType {
   subcategories: Subcategory[];
   bankAccounts: BankAccount[];
   creditCards: CreditCard[];
+  transfers: Transfer[];
   
   // Estados de loading
   isLoading: boolean;
@@ -42,6 +45,7 @@ interface DataContextType {
   refreshSubcategories: () => Promise<void>;
   refreshBankAccounts: () => Promise<void>;
   refreshCreditCards: () => Promise<void>;
+  refreshTransfers: () => Promise<void>;
   
   // Métodos de adição/atualização local
   addExpense: (expense: Expense) => void;
@@ -67,6 +71,9 @@ interface DataContextType {
   addSubcategory: (subcategory: Subcategory) => void;
   updateSubcategory: (subcategory: Subcategory) => void;
   removeSubcategory: (id: string) => void;
+  
+  addTransfer: (transfer: Transfer) => void;
+  removeTransfer: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -83,6 +90,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
   
   // Estados de controle
   const [isLoading, setIsLoading] = useState(false);
@@ -113,6 +121,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         { id: 'categories', label: 'Carregando categorias...', completed: false, current: false },
         { id: 'bank-accounts', label: 'Carregando contas bancárias...', completed: false, current: false },
         { id: 'credit-cards', label: 'Carregando cartões de crédito...', completed: false, current: false },
+        { id: 'transfers', label: 'Carregando transferências...', completed: false, current: false },
         { id: 'subcategories', label: 'Carregando subcategorias...', completed: false, current: false }
       ];
       setLoadingSteps(steps);
@@ -128,37 +137,41 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         incomesResponse,
         categoriesResponse,
         bankAccountsResponse,
-        creditCardsResponse
-      ] = await Promise.all([
+        creditCardsResponse,
+        transfersResponse
+      ] = await Promise.allSettled([
         expenseService.getExpenses(),
         incomeService.getIncomes(),
         categoryService.getCategories(),
         bankAccountService.getBankAccounts(),
-        creditCardService.getCreditCards()
+        creditCardService.getCreditCards(),
+        transferService.getTransfers()
       ]);
       
       // Processar respostas
-      setExpenses(expensesResponse.data?.expenses || []);
+      setExpenses(expensesResponse.status === 'fulfilled' ? expensesResponse.value.data?.expenses || [] : []);
       steps[0].completed = true;
       steps[0].current = false;
       steps[1].completed = true;
       steps[2].completed = true;
       steps[3].completed = true;
       steps[4].completed = true;
+      steps[5].completed = true;
       setLoadingProgress(70);
       setLoadingSteps([...steps]);
       
-      setIncomes(incomesResponse.data?.incomes || []);
-      setBankAccounts(bankAccountsResponse.data?.bankAccounts || []);
+      setIncomes(incomesResponse.status === 'fulfilled' ? incomesResponse.value.data?.incomes || [] : []);
+      setBankAccounts(bankAccountsResponse.status === 'fulfilled' ? bankAccountsResponse.value.data?.bankAccounts || [] : []);
       // A API retorna { success: true, data: cards } não { data: { creditCards: [...] } }
-      setCreditCards(creditCardsResponse.data || []);
+      setCreditCards(creditCardsResponse.status === 'fulfilled' ? creditCardsResponse.value.data || [] : []);
+      setTransfers(transfersResponse.status === 'fulfilled' ? transfersResponse.value.data?.transfers || [] : []);
       
       // Carregar categorias
-      const allCategories = categoriesResponse.data?.categories || [];
+      const allCategories = categoriesResponse.status === 'fulfilled' ? categoriesResponse.value.data?.categories || [] : [];
       setCategories(allCategories);
       
       // Carregar subcategorias
-      steps[5].current = true;
+      steps[6].current = true;
       setLoadingSteps([...steps]);
       setLoadingProgress(85);
       
@@ -176,8 +189,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setSubcategories(allSubcategories);
       
       // Finalizar
-      steps[5].completed = true;
-      steps[5].current = false;
+      steps[6].completed = true;
+      steps[6].current = false;
       setLoadingProgress(100);
       setLoadingSteps([...steps]);
       
@@ -268,6 +281,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       setCreditCards(response.data || []);
     } catch (error) {
       console.error('Erro ao atualizar cartões de crédito:', error);
+    }
+  };
+
+  const refreshTransfers = async () => {
+    try {
+      const response = await transferService.getTransfers();
+      setTransfers(response.data?.transfers || []);
+    } catch (error) {
+      console.error('Erro ao atualizar transferências:', error);
     }
   };
 
@@ -531,6 +553,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setSubcategories(prev => prev.filter(s => s.id !== id));
   };
 
+  const addTransfer = (transfer: Transfer) => {
+    setTransfers(prev => [transfer, ...prev]);
+  };
+
+  const removeTransfer = (id: string) => {
+    setTransfers(prev => prev.filter(t => t.id !== id));
+  };
+
   const value: DataContextType = {
     // Dados
     expenses,
@@ -539,6 +569,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     subcategories,
     bankAccounts,
     creditCards,
+    transfers,
     
     // Estados
     isLoading,
@@ -553,6 +584,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refreshSubcategories,
     refreshBankAccounts,
     refreshCreditCards,
+    refreshTransfers,
     
     // Métodos de atualização local
     addExpense,
@@ -572,7 +604,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     removeCategory,
     addSubcategory,
     updateSubcategory,
-    removeSubcategory
+    removeSubcategory,
+    addTransfer,
+    removeTransfer
   };
 
   return (

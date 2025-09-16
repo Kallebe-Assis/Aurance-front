@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { FiRepeat, FiArrowRight } from 'react-icons/fi';
+import { FiRepeat, FiArrowRight, FiTrash2, FiCalendar, FiDollarSign } from 'react-icons/fi';
 import { useData } from '../contexts/DataContext';
-import { bankAccountService } from '../services/api';
+import { transferService } from '../services/api';
+import { Transfer } from '../types';
 import toast from 'react-hot-toast';
 
 const Container = styled.div`
@@ -132,8 +133,167 @@ const AccountBalance = styled.div`
   color: var(--gray-600);
 `;
 
+const HistorySection = styled.div`
+  margin-top: 3rem;
+`;
+
+const HistoryTitle = styled.h2`
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-800);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const TransferList = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const TransferItem = styled.div`
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const TransferInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+`;
+
+const TransferDescription = styled.div`
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray-800);
+  font-size: var(--font-size-sm);
+`;
+
+const TransferDetails = styled.div`
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const TransferAmount = styled.div`
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-800);
+  text-align: right;
+`;
+
+const TransferHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+`;
+
+const TransferFooter = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--gray-100);
+`;
+
+const CurrentBalance = styled.div`
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  background: var(--gray-50);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+`;
+
+const BalancePreview = styled.div`
+  background: var(--gray-50);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px solid var(--gray-200);
+`;
+
+const BalanceRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const BalanceLabel = styled.span`
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  font-weight: var(--font-weight-medium);
+`;
+
+const BalanceValue = styled.span<{ isPositive?: boolean }>`
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: ${props => props.isPositive ? '#059669' : '#dc2626'};
+`;
+
+const TransferDate = styled.div`
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+`;
+
+const DeleteButton = styled.button`
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  
+  &:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--gray-500);
+  
+  h3 {
+    margin-bottom: 0.5rem;
+    color: var(--gray-600);
+  }
+`;
+
 const Transfers: React.FC = () => {
-  const { bankAccounts, updateBankAccount, refreshBankAccounts } = useData();
+  const { bankAccounts, transfers, addTransfer, removeTransfer, refreshBankAccounts } = useData();
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [amount, setAmount] = useState('');
@@ -165,36 +325,22 @@ const Transfers: React.FC = () => {
       return;
     }
     
-    if (fromAccount.balance < transferAmount) {
-      toast.error('Saldo insuficiente na conta de origem');
-      return;
-    }
-    
     setIsLoading(true);
     
     try {
-      // Atualizar conta de origem (subtrair)
-      const fromResponse = await bankAccountService.updateBalance(
-        fromAccountId, 
-        fromAccount.balance - transferAmount
-      );
+      // Criar transferência usando o novo serviço
+      const response = await transferService.createTransfer({
+        fromAccountId,
+        toAccountId,
+        amount: transferAmount,
+        description: description || '',
+        transferDate: new Date()
+      });
       
-      // Atualizar conta de destino (somar)
-      const toAccount = bankAccounts.find(acc => acc.id === toAccountId);
-      if (toAccount) {
-        const toResponse = await bankAccountService.updateBalance(
-          toAccountId, 
-          toAccount.balance + transferAmount
-        );
-        
-        // Atualizar dados locais com as respostas da API
-        updateBankAccount(toResponse.data);
-      }
+      // Adicionar transferência ao contexto local
+      addTransfer(response.data.transfer);
       
-      // Atualizar dados locais da conta de origem
-      updateBankAccount(fromResponse.data);
-      
-      // Forçar refresh dos dados para garantir sincronização
+      // Atualizar contas bancárias
       await refreshBankAccounts();
       
       toast.success('Transferência realizada com sucesso!');
@@ -213,8 +359,40 @@ const Transfers: React.FC = () => {
     }
   };
 
+  const handleDeleteTransfer = async (transferId: string) => {
+    if (!window.confirm('Tem certeza que deseja reverter esta transferência?')) {
+      return;
+    }
+    
+    try {
+      await transferService.deleteTransfer(transferId);
+      removeTransfer(transferId);
+      await refreshBankAccounts();
+      toast.success('Transferência revertida com sucesso!');
+    } catch (error) {
+      console.error('Erro ao reverter transferência:', error);
+      toast.error('Erro ao reverter transferência');
+    }
+  };
+
   const fromAccount = bankAccounts.find(acc => acc.id === fromAccountId);
   const toAccount = bankAccounts.find(acc => acc.id === toAccountId);
+
+  // Verificar se há contas suficientes
+  if (bankAccounts.length < 2) {
+    return (
+      <Container>
+        <Header>
+          <FiRepeat size={24} color="#3b82f6" />
+          <Title>Transferências</Title>
+        </Header>
+        <EmptyState>
+          <h3>Contas insuficientes</h3>
+          <p>Você precisa ter pelo menos 2 contas bancárias para realizar transferências.</p>
+        </EmptyState>
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -252,6 +430,11 @@ const Transfers: React.FC = () => {
                   <AccountName>{fromAccount.name}</AccountName>
                   <AccountBalance>
                     Saldo: R$ {fromAccount.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {amount && parseFloat(amount) > 0 && (
+                      <span style={{ color: '#ef4444', marginLeft: '0.5rem' }}>
+                        (Após: R$ {(fromAccount.balance - parseFloat(amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                      </span>
+                    )}
                   </AccountBalance>
                 </AccountInfo>
               )}
@@ -284,6 +467,11 @@ const Transfers: React.FC = () => {
                   <AccountName>{toAccount.name}</AccountName>
                   <AccountBalance>
                     Saldo: R$ {toAccount.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {amount && parseFloat(amount) > 0 && (
+                      <span style={{ color: '#10b981', marginLeft: '0.5rem' }}>
+                        (Após: R$ {(toAccount.balance + parseFloat(amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                      </span>
+                    )}
                   </AccountBalance>
                 </AccountInfo>
               )}
@@ -316,6 +504,36 @@ const Transfers: React.FC = () => {
             </FormGroup>
           </div>
 
+          {/* Preview de Saldo */}
+          {fromAccountId && toAccountId && amount && (
+            <BalancePreview>
+              <BalanceRow>
+                <BalanceLabel>Saldo atual da conta origem:</BalanceLabel>
+                <BalanceValue isPositive={(fromAccount?.balance || 0) >= 0}>
+                  R$ {(fromAccount?.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </BalanceValue>
+              </BalanceRow>
+              <BalanceRow>
+                <BalanceLabel>Saldo atual da conta destino:</BalanceLabel>
+                <BalanceValue isPositive={(toAccount?.balance || 0) >= 0}>
+                  R$ {(toAccount?.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </BalanceValue>
+              </BalanceRow>
+              <BalanceRow>
+                <BalanceLabel>Saldo após transferência (origem):</BalanceLabel>
+                <BalanceValue isPositive={(fromAccount?.balance || 0) - parseFloat(amount) >= 0}>
+                  R$ {((fromAccount?.balance || 0) - parseFloat(amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </BalanceValue>
+              </BalanceRow>
+              <BalanceRow>
+                <BalanceLabel>Saldo após transferência (destino):</BalanceLabel>
+                <BalanceValue isPositive={(toAccount?.balance || 0) + parseFloat(amount) >= 0}>
+                  R$ {((toAccount?.balance || 0) + parseFloat(amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </BalanceValue>
+              </BalanceRow>
+            </BalancePreview>
+          )}
+
           {/* Botão */}
           <Button type="submit" disabled={isLoading}>
             <FiRepeat />
@@ -323,6 +541,66 @@ const Transfers: React.FC = () => {
           </Button>
         </form>
       </TransferCard>
+
+      {/* Histórico de Transferências */}
+      <HistorySection>
+        <HistoryTitle>
+          <FiCalendar />
+          Histórico de Transferências
+        </HistoryTitle>
+        
+        {transfers.length === 0 ? (
+          <EmptyState>
+            <h3>Nenhuma transferência realizada</h3>
+            <p>As transferências aparecerão aqui após serem realizadas.</p>
+          </EmptyState>
+        ) : (
+          <TransferList>
+            {transfers.map((transfer) => {
+              const fromAccount = bankAccounts.find(acc => acc.id === transfer.fromAccountId);
+              const toAccount = bankAccounts.find(acc => acc.id === transfer.toAccountId);
+              const transferDate = new Date(transfer.transferDate);
+              
+              return (
+                <TransferItem key={transfer.id}>
+                  <TransferHeader>
+                    <TransferInfo>
+                      <TransferDescription>
+                        {transfer.description || 'Transferência entre contas'}
+                      </TransferDescription>
+                      <TransferDetails>
+                        <FiArrowRight />
+                        {fromAccount?.name || 'Conta origem'} → {toAccount?.name || 'Conta destino'}
+                      </TransferDetails>
+                    </TransferInfo>
+                    <TransferAmount>
+                      R$ {transfer.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </TransferAmount>
+                  </TransferHeader>
+                  
+                  <TransferFooter>
+                    <TransferDate>
+                      {transferDate.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </TransferDate>
+                    <DeleteButton
+                      onClick={() => handleDeleteTransfer(transfer.id)}
+                      title="Reverter transferência"
+                    >
+                      <FiTrash2 size={16} />
+                    </DeleteButton>
+                  </TransferFooter>
+                </TransferItem>
+              );
+            })}
+          </TransferList>
+        )}
+      </HistorySection>
     </Container>
   );
 };

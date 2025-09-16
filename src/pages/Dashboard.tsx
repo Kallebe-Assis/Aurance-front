@@ -13,6 +13,7 @@ import {
 import { useData } from '../contexts/DataContext';
 import FloatingActionButton from '../components/FloatingActionButton';
 import { PieChart, BarChart, LineChart } from '../components/charts';
+import Modal from '../components/common/Modal';
 
 // ========================================
 // FUNÇÃO PARA FORMATAR MOEDA
@@ -567,6 +568,12 @@ export default function Dashboard() {
   const [showRecalculateModal, setShowRecalculateModal] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [recalculateProgress, setRecalculateProgress] = useState(0);
+  const [showRecalculateResultModal, setShowRecalculateResultModal] = useState(false);
+  const [recalculateResult, setRecalculateResult] = useState<{
+    success: boolean;
+    accountsUpdated: number;
+    message: string;
+  } | null>(null);
   
   // Estado para o período selecionado
   const [selectedPeriod, setSelectedPeriod] = useState<'current' | '3months' | '6months' | '1year'>('current');
@@ -934,20 +941,38 @@ export default function Dashboard() {
         if (result.success) {
           const accountsUpdated = result.data.updatedAccounts || 0;
           if (accountsUpdated > 0) {
-            alert(`Recálculo concluído! ${accountsUpdated} conta(s) foram atualizadas.`);
+            setRecalculateResult({
+              success: true,
+              accountsUpdated,
+              message: `${accountsUpdated} conta(s) foram atualizadas com sucesso!`
+            });
           } else {
-            alert('Recálculo concluído! Todos os saldos já estavam corretos.');
+            setRecalculateResult({
+              success: true,
+              accountsUpdated: 0,
+              message: 'Todos os saldos já estavam corretos!'
+            });
           }
         } else {
-          alert('Erro durante o recálculo. Tente novamente.');
+          setRecalculateResult({
+            success: false,
+            accountsUpdated: 0,
+            message: 'Erro durante o recálculo. Tente novamente.'
+          });
         }
+        setShowRecalculateResultModal(true);
       }, 500);
       
     } catch (error) {
       console.error('❌ Erro no recálculo:', error);
       setIsRecalculating(false);
       setRecalculateProgress(0);
-      alert('Erro durante o recálculo. Tente novamente.');
+      setRecalculateResult({
+        success: false,
+        accountsUpdated: 0,
+        message: 'Erro durante o recálculo. Tente novamente.'
+      });
+      setShowRecalculateResultModal(true);
     }
   };
 
@@ -1503,6 +1528,16 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal de resultado do recálculo */}
+      <Modal
+        isOpen={showRecalculateResultModal}
+        onClose={() => setShowRecalculateResultModal(false)}
+        title={recalculateResult?.success ? "Recálculo Concluído!" : "Erro no Recálculo"}
+        message={recalculateResult?.message || ""}
+        variant={recalculateResult?.success ? "success" : "error"}
+        buttonText="Entendi"
+      />
 
       {/* Botão flutuante para adicionar transações */}
       <FloatingActionButton />
