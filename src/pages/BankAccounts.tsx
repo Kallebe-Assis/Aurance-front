@@ -682,13 +682,13 @@ const BankAccounts: React.FC = () => {
         toast.success('Conta bancária criada com sucesso!');
         
         // Adicionar conta ao contexto global
-        addBankAccount(response.data);
+        addBankAccount(response.data.bankAccount);
       } else if (modalType === 'edit' && selectedAccount) {
         const response = await bankAccountService.updateBankAccount(selectedAccount.id, accountData);
         toast.success('Conta bancária atualizada com sucesso!');
         
         // Atualizar conta no contexto global
-        updateBankAccount(response.data);
+        updateBankAccount(response.data.bankAccount);
       }
 
       closeModal();
