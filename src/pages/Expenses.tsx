@@ -375,6 +375,8 @@ interface ExpenseFormData {
   isPaid: boolean;
   paymentDate: string;
   bankAccountId: string;
+  isRecurring: boolean;
+  recurringMonths: string;
 }
 
 const PaymentDateContainer = styled.div`
@@ -523,6 +525,7 @@ const Expenses: React.FC = () => {
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -544,7 +547,9 @@ const Expenses: React.FC = () => {
     observations: '',
     isPaid: false,
     paymentDate: '',
-    bankAccountId: ''
+    bankAccountId: '',
+    isRecurring: false,
+    recurringMonths: '1'
   });
 
   // Filtrar despesas para excluir despesas de cartão de crédito
@@ -588,7 +593,14 @@ const Expenses: React.FC = () => {
                expenseDate.getDate() === filterDate.getDate();
       })();
       
-      return matchesSearch && matchesCategory && matchesStatus && matchesAmount && matchesDate;
+      const matchesMonth = !selectedMonth || (() => {
+        const expenseDate = new Date(expense.dueDate);
+        const [year, month] = selectedMonth.split('-');
+        return expenseDate.getFullYear() === parseInt(year) &&
+               expenseDate.getMonth() === (parseInt(month) - 1); // getMonth() retorna 0-11
+      })();
+      
+      return matchesSearch && matchesCategory && matchesStatus && matchesAmount && matchesDate && matchesMonth;
     });
     
     // Verificação final de segurança
@@ -601,7 +613,7 @@ const Expenses: React.FC = () => {
     console.log('✅ Verificação: Nenhuma despesa de cartão deve aparecer aqui');
     
     return filteredExpenses;
-  }, [filteredExpenses, searchTerm, selectedCategory, selectedStatus, minAmount, maxAmount, dueDate]);
+  }, [filteredExpenses, searchTerm, selectedCategory, selectedStatus, minAmount, maxAmount, dueDate, selectedMonth]);
 
   const formatCurrency = (value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
@@ -697,18 +709,12 @@ const Expenses: React.FC = () => {
         bankAccountId: formData.bankAccountId && formData.bankAccountId !== '' ? formData.bankAccountId : null,
         // 🚫 GARANTIR que despesas criadas pela tela de despesas NUNCA sejam de cartão
         isCreditCard: false,
-        creditCardId: null
+        creditCardId: null,
+        // Campos de recorrência
+        isRecurring: Boolean(formData.isRecurring),
+        recurringMonths: parseInt(formData.recurringMonths) || 1
       };
 
-      console.log('=== DEBUG FRONTEND ===');
-      console.log('Dados do formulário:', formData);
-      console.log('Dados enviados para API:', expenseData);
-      console.log('🔍 VERIFICAÇÃO ESPECÍFICA DO BANKACCOUNTID:');
-      console.log('  - formData.bankAccountId:', formData.bankAccountId);
-      console.log('  - expenseData.bankAccountId:', expenseData.bankAccountId);
-      console.log('  - Tipo do bankAccountId:', typeof formData.bankAccountId);
-      console.log('  - Valor booleano (!!formData.bankAccountId):', !!formData.bankAccountId);
-      console.log('======================');
 
       if (editingExpense) {
         // Atualizar despesa existente
@@ -719,14 +725,22 @@ const Expenses: React.FC = () => {
         updateExpense(response.data.expense, response.data.updatedBankAccount);
       } else {
         // Criar nova despesa
-        console.log('📝 Expenses: Criando nova despesa com dados:', expenseData);
         const response = await expenseService.createExpense(expenseData);
-        console.log('📝 Expenses: Despesa criada com sucesso:', response.data.expense);
-        toast.success('Despesa criada com sucesso!');
         
-        // Atualizar dados localmente
-        console.log('🔄 Expenses: Chamando addExpense do DataContext...');
-        addExpense(response.data.expense);
+        // Verificar se foram criadas despesas recorrentes
+        if (response.data.recurringInfo && response.data.recurringInfo.totalCreated > 1) {
+          toast.success(`${response.data.recurringInfo.totalCreated} despesas recorrentes criadas com sucesso!`);
+          
+          // Adicionar todas as despesas recorrentes ao contexto
+          response.data.recurringInfo.allExpenses.forEach((expense: any) => {
+            addExpense(expense);
+          });
+        } else {
+          toast.success('Despesa criada com sucesso!');
+          
+          // Atualizar dados localmente
+          addExpense(response.data.expense);
+        }
       }
       
       // Limpar formulário e fechar modal
@@ -750,7 +764,9 @@ const Expenses: React.FC = () => {
       observations: '',
       isPaid: false,
       paymentDate: '',
-      bankAccountId: ''
+      bankAccountId: '',
+      isRecurring: false,
+      recurringMonths: '1'
     });
     setEditingExpense(null);
   };
@@ -762,6 +778,7 @@ const Expenses: React.FC = () => {
     setMinAmount('');
     setMaxAmount('');
     setDueDate('');
+    setSelectedMonth('');
   };
 
   const handleViewExpense = (expense: Expense) => {
@@ -832,7 +849,9 @@ const Expenses: React.FC = () => {
       observations: expense.observations || '',
       isPaid: expense.isPaid,
       paymentDate: formatDateForInput(expense.paidDate),
-      bankAccountId: expense.bankAccountId || ''
+      bankAccountId: expense.bankAccountId || '',
+      isRecurring: expense.isRecurring || false,
+      recurringMonths: expense.recurringMonths?.toString() || '1'
     });
     
     setIsModalOpen(true);
@@ -1144,6 +1163,14 @@ const Expenses: React.FC = () => {
             />
             
             <Input
+              type="month"
+              placeholder="Filtrar por mês"
+              value={selectedMonth}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedMonth(e.target.value)}
+              fullWidth
+            />
+            
+            <Input
               type="text"
               placeholder="Pesquisar despesas..."
               value={searchTerm}
@@ -1182,10 +1209,38 @@ const Expenses: React.FC = () => {
                 <TableRow key={expense.id}>
                   <TableCell>
                     <div>
-                      <div style={{ fontWeight: 500 }}>{expense.description}</div>
+                      <div style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {expense.description}
+                        {expense.isRecurring && (
+                          <span style={{
+                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                            color: 'white',
+                            padding: '2px 6px',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            🔄 Recorrente
+                          </span>
+                        )}
+                      </div>
                       {expense.observations && (
                         <small style={{ color: 'var(--text-secondary)' }}>
                           {expense.observations}
+                        </small>
+                      )}
+                      {expense.isRecurring && expense.recurringMonths && (
+                        <small style={{ 
+                          color: '#3b82f6', 
+                          fontSize: '0.7rem',
+                          fontWeight: '500',
+                          marginTop: '2px',
+                          display: 'block'
+                        }}>
+                          {expense.recurringMonths} meses
                         </small>
                       )}
                     </div>
@@ -1427,6 +1482,72 @@ const Expenses: React.FC = () => {
               </Select>
                </div>
             </FormRow>
+            
+            {/* Seção de Despesas Recorrentes */}
+            <div style={{
+              padding: 'var(--spacing-md)',
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+              borderRadius: '12px',
+              border: '1px solid rgba(14, 165, 233, 0.2)',
+              marginBottom: 'var(--spacing-md)'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 var(--spacing-sm) 0', 
+                color: '#0369a1', 
+                fontSize: '1rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🔄 Despesa Recorrente
+              </h4>
+              
+              <SwitchContainer>
+                <SwitchLabel htmlFor="isRecurring">Esta despesa se repete mensalmente:</SwitchLabel>
+                <SwitchInput
+                  type="checkbox"
+                  id="isRecurring"
+                  checked={formData.isRecurring}
+                  onChange={(e) => handleInputChange('isRecurring', e.target.checked)}
+                />
+                <Switch htmlFor="isRecurring" />
+                <span style={{ marginLeft: '8px', fontWeight: 500 }}>
+                  {formData.isRecurring ? 'Sim' : 'Não'}
+                </span>
+              </SwitchContainer>
+              
+              {formData.isRecurring && (
+                <div style={{ marginTop: 'var(--spacing-sm)' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '8px', 
+                    fontWeight: '600', 
+                    color: '#0369a1',
+                    fontSize: '0.9rem'
+                  }}>
+                    Por quantos meses? (máximo 12)
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={formData.recurringMonths}
+                    onChange={(e) => handleInputChange('recurringMonths', e.target.value)}
+                    fullWidth
+                    style={{ maxWidth: '120px' }}
+                  />
+                  <small style={{ 
+                    color: '#0369a1', 
+                    fontSize: '0.8rem',
+                    marginTop: '4px',
+                    display: 'block'
+                  }}>
+                    Todas as despesas serão criadas como pendentes, com o mesmo valor e dia de vencimento
+                  </small>
+                </div>
+              )}
+            </div>
             
                                        <div>
                 <label style={{ 

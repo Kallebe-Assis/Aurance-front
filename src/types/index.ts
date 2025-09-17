@@ -73,6 +73,9 @@ export interface Transaction {
   originalAmount?: number;
   isRecurring?: boolean;
   recurringType?: string;
+  recurringMonths?: number;
+  recurringParentId?: string;
+  recurringGroupId?: string;
   userId: string;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -278,6 +281,8 @@ export interface ExpenseFormData {
   subcategoryId?: string;
   tags: string[];
   observations?: string;
+  isRecurring?: boolean;
+  recurringMonths?: number;
 }
 
 export interface IncomeFormData {

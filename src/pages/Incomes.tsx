@@ -408,7 +408,8 @@ const Incomes: React.FC = () => {
     minAmount: '',
     maxAmount: '',
     dueDate: '',
-    isReceived: ''
+    isReceived: '',
+    selectedMonth: ''
   });
 
   // Filtrar categorias para mostrar apenas categorias de receitas
@@ -451,8 +452,16 @@ const Incomes: React.FC = () => {
         (filters.isReceived === 'partial' && income.isPartial) ||
         (filters.isReceived === 'pending' && !income.isReceived && !income.isPartial);
       
+      // Filtro por mês
+      const matchesMonth = !filters.selectedMonth || (() => {
+        const incomeDate = convertFirebaseDate(income.receivedDate || income.dueDate);
+        const [year, month] = filters.selectedMonth.split('-');
+        return incomeDate.getFullYear() === parseInt(year) &&
+               incomeDate.getMonth() === (parseInt(month) - 1); // getMonth() retorna 0-11
+      })();
+      
       return matchesDescription && matchesCategory && matchesSubcategory && 
-             matchesMinAmount && matchesMaxAmount && matchesDueDate && matchesStatus;
+             matchesMinAmount && matchesMaxAmount && matchesDueDate && matchesStatus && matchesMonth;
     });
   }, [incomes, filters]);
 
@@ -695,7 +704,8 @@ const Incomes: React.FC = () => {
       minAmount: '',
       maxAmount: '',
       dueDate: '',
-      isReceived: ''
+      isReceived: '',
+      selectedMonth: ''
     });
   };
 
@@ -852,6 +862,14 @@ const Incomes: React.FC = () => {
             placeholder="Data de recebimento"
             value={filters.dueDate}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('dueDate', e.target.value)}
+            fullWidth
+          />
+          
+          <Input
+            type="month"
+            placeholder="Filtrar por mês"
+            value={filters.selectedMonth}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('selectedMonth', e.target.value)}
             fullWidth
           />
           
