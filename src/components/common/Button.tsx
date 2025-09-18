@@ -123,6 +123,12 @@ const getSizeStyles = (size: string) => {
         font-size: var(--font-size-sm);
         border-radius: var(--radius-sm);
         min-height: 32px;
+        
+        @media (max-width: 768px) {
+          padding: var(--spacing-mobile-sm) var(--spacing-mobile-md);
+          font-size: var(--font-size-xs);
+          min-height: 36px;
+        }
       `;
     
     case 'lg':
@@ -131,6 +137,12 @@ const getSizeStyles = (size: string) => {
         font-size: var(--font-size-lg);
         border-radius: var(--radius-lg);
         min-height: 48px;
+        
+        @media (max-width: 768px) {
+          padding: var(--spacing-mobile-md) var(--spacing-mobile-lg);
+          font-size: var(--font-size-md);
+          min-height: 44px;
+        }
       `;
     
     default: // md
@@ -139,6 +151,12 @@ const getSizeStyles = (size: string) => {
         font-size: var(--font-size-base);
         border-radius: var(--radius-md);
         min-height: 40px;
+        
+        @media (max-width: 768px) {
+          padding: var(--spacing-mobile-md) var(--spacing-mobile-lg);
+          font-size: var(--font-size-sm);
+          min-height: 44px;
+        }
       `;
   }
 };

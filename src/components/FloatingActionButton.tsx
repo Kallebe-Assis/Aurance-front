@@ -63,13 +63,18 @@ const pulse = keyframes`
 // Estilos
 const FloatingContainer = styled.div`
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 1000;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1001;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  
+  @media (max-width: 768px) {
+    bottom: 5.5rem; /* Mais próximo da quina */
+    right: 1rem; /* Mais próximo da lateral */
+  }
 `;
 
 const MenuContainer = styled.div<{ isOpen: boolean }>`
@@ -127,8 +132,8 @@ const MainButton = styled.button<{ isOpen: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 3rem;
+  height: 3rem;
   background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
   border: none;
   border-radius: 50%;
@@ -148,7 +153,7 @@ const MainButton = styled.button<{ isOpen: boolean }>`
   
   svg {
     color: white;
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     transition: transform 0.3s ease;
     transform: ${({ isOpen }) => isOpen ? 'rotate(45deg)' : 'rotate(0deg)'};
   }
@@ -164,7 +169,7 @@ const Overlay = styled.div<{ isOpen: boolean }>`
   opacity: ${({ isOpen }) => isOpen ? 1 : 0};
   visibility: ${({ isOpen }) => isOpen ? 'visible' : 'hidden'};
   transition: all 0.3s ease;
-  z-index: 999;
+  z-index: 1000;
 `;
 
 // Tipos
@@ -217,7 +222,16 @@ const FloatingActionButton: React.FC = () => {
 
   const handleActionClick = (action: QuickAction) => {
     setIsOpen(false);
-    navigate(action.path);
+    
+    // Navegar para páginas com parâmetros para abrir modais automaticamente
+    if (action.id === 'expense') {
+      navigate('/expenses?openModal=true');
+    } else if (action.id === 'income') {
+      navigate('/incomes?openModal=true');
+    } else {
+      // Navegar para outras páginas normalmente
+      navigate(action.path);
+    }
   };
 
   const handleOverlayClick = () => {

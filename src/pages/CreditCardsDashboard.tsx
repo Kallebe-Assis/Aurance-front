@@ -31,6 +31,10 @@ const Container = styled.div`
   margin: 0 auto;
   background-color: var(--gray-200);
   min-height: 100vh;
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+  }
 `;
 
 // Cabeçalho com título
@@ -39,6 +43,13 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-mobile-md);
+    margin-bottom: var(--spacing-mobile-lg);
+  }
 `;
 
 const Title = styled.h1`

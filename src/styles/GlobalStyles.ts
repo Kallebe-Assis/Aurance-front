@@ -32,7 +32,14 @@ export const GlobalStyles = createGlobalStyle`
     --error-color: #ef4444;
     --info-color: #3b82f6;
     
-    /* Espaçamentos */
+    /* Breakpoints responsivos */
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
+    
+    /* Espaçamentos responsivos */
     --spacing-xs: 0.25rem;
     --spacing-sm: 0.5rem;
     --spacing-md: 1rem;
@@ -40,6 +47,13 @@ export const GlobalStyles = createGlobalStyle`
     --spacing-xl: 2rem;
     --spacing-2xl: 3rem;
     --spacing-3xl: 4rem;
+    
+    /* Espaçamentos mobile (menores) */
+    --spacing-mobile-xs: 0.125rem;
+    --spacing-mobile-sm: 0.25rem;
+    --spacing-mobile-md: 0.5rem;
+    --spacing-mobile-lg: 0.75rem;
+    --spacing-mobile-xl: 1rem;
     
     /* Bordas */
     --radius-sm: 0.25rem;
@@ -354,5 +368,196 @@ export const GlobalStyles = createGlobalStyle`
 
   .text-tertiary {
     color: var(--text-tertiary);
+  }
+
+  /* Estilos responsivos para mobile */
+  @media (max-width: 768px) {
+    /* Ajustes gerais para mobile */
+    body {
+      font-size: var(--font-size-sm);
+      line-height: 1.4;
+    }
+
+    /* Títulos menores em mobile */
+    h1, .h1 {
+      font-size: var(--font-size-2xl);
+      margin-bottom: var(--spacing-mobile-md);
+    }
+
+    h2, .h2 {
+      font-size: var(--font-size-xl);
+      margin-bottom: var(--spacing-mobile-md);
+    }
+
+    h3, .h3 {
+      font-size: var(--font-size-lg);
+      margin-bottom: var(--spacing-mobile-sm);
+    }
+
+    h4, .h4 {
+      font-size: var(--font-size-md);
+      margin-bottom: var(--spacing-mobile-sm);
+    }
+
+    /* Espaçamentos menores em mobile */
+    .mobile-spacing-sm {
+      margin: var(--spacing-mobile-sm);
+      padding: var(--spacing-mobile-sm);
+    }
+
+    .mobile-spacing-md {
+      margin: var(--spacing-mobile-md);
+      padding: var(--spacing-mobile-md);
+    }
+
+    .mobile-spacing-lg {
+      margin: var(--spacing-mobile-lg);
+      padding: var(--spacing-mobile-lg);
+    }
+
+    /* Cards compactos para mobile */
+    .mobile-card {
+      padding: var(--spacing-mobile-md);
+      margin-bottom: var(--spacing-mobile-md);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Botões otimizados para touch */
+    .mobile-button {
+      min-height: 44px; /* Tamanho mínimo recomendado para touch */
+      padding: var(--spacing-mobile-md) var(--spacing-mobile-lg);
+      font-size: var(--font-size-sm);
+      border-radius: var(--radius-md);
+    }
+
+    /* Inputs otimizados para mobile */
+    .mobile-input {
+      min-height: 44px;
+      padding: var(--spacing-mobile-md);
+      font-size: var(--font-size-sm);
+      border-radius: var(--radius-md);
+    }
+
+    /* Grid responsivo */
+    .mobile-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--spacing-mobile-md);
+    }
+
+    .mobile-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-mobile-sm);
+    }
+
+    /* Flex responsivo */
+    .mobile-flex {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-mobile-sm);
+    }
+
+    .mobile-flex-row {
+      display: flex;
+      flex-direction: row;
+      gap: var(--spacing-mobile-sm);
+      align-items: center;
+    }
+
+    /* Texto responsivo */
+    .mobile-text-sm {
+      font-size: var(--font-size-xs);
+      line-height: 1.3;
+    }
+
+    .mobile-text-base {
+      font-size: var(--font-size-sm);
+      line-height: 1.4;
+    }
+
+    /* Ocultar elementos em mobile */
+    .mobile-hidden {
+      display: none !important;
+    }
+
+    /* Mostrar apenas em mobile */
+    .mobile-only {
+      display: block !important;
+    }
+
+    .desktop-only {
+      display: none !important;
+    }
+  }
+
+  /* Estilos para tablet */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .tablet-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+    }
+
+    .tablet-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--spacing-sm);
+    }
+
+    .tablet-hidden {
+      display: none !important;
+    }
+
+    .tablet-only {
+      display: block !important;
+    }
+  }
+
+  /* Estilos para desktop */
+  @media (min-width: 1025px) {
+    .desktop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .desktop-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--spacing-md);
+    }
+
+    .desktop-only {
+      display: block !important;
+    }
+
+    .mobile-only,
+    .tablet-only {
+      display: none !important;
+    }
+  }
+
+  /* Utilitários de responsividade */
+  .responsive-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+  }
+
+  @media (max-width: 768px) {
+    .responsive-container {
+      padding: 0 var(--spacing-mobile-md);
+    }
+  }
+
+  /* Scroll suave em mobile */
+  @media (max-width: 768px) {
+    html {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
   }
 `;

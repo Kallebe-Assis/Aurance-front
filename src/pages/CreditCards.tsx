@@ -14,6 +14,11 @@ const CreditCardsContainer = styled.div`
   flex-direction: column;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
+  
+  @media (max-width: 768px) {
+    gap: var(--spacing-mobile-lg);
+    padding: var(--spacing-mobile-md);
+  }
 `;
 
 const Header = styled.div`
@@ -22,6 +27,12 @@ const Header = styled.div`
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-mobile-md);
+  }
 `;
 
 const Title = styled.h1`
@@ -180,8 +191,8 @@ const StatLabel = styled.div`
 `;
 
 const StatValue = styled.div<{ variant?: 'primary' | 'success' | 'warning' | 'danger' }>`
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: bold;
   color: ${props => {
     switch (props.variant) {
       case 'success': return 'var(--success-color)';
@@ -190,7 +201,12 @@ const StatValue = styled.div<{ variant?: 'primary' | 'success' | 'warning' | 'da
       default: return 'var(--text-primary)';
     }
   }};
+  line-height: 1.2;
   transition: all 0.3s ease;
+  
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
   
   /* Animação suave para mudanças de valor */
   &.value-changing {
@@ -357,26 +373,53 @@ const ExpenseAmount = styled.div`
 // Estatísticas gerais (menores)
 const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-mobile-sm);
+    margin-bottom: var(--spacing-mobile-lg);
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-mobile-sm);
+  }
 `;
 
 const StatCard = styled.div`
   background: white;
-  padding: var(--spacing-md);
+  padding: var(--spacing-sm);
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border-left: 3px solid var(--primary-color);
   text-align: center;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-sm);
+    min-height: 70px;
+  }
 `;
 
 const StatTitle = styled.h3`
-  margin: 0 0 var(--spacing-sm) 0;
+  margin: 0 0 var(--spacing-xs) 0;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.65rem;
   font-weight: 500;
+  line-height: 1.2;
+  
+  @media (max-width: 768px) {
+    font-size: 0.6rem;
+    margin: 0 0 2px 0;
+  }
 `;
+
 
 
 const StatChange = styled.div`

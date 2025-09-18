@@ -30,6 +30,14 @@ const StyledInput = styled.input<InputProps>`
   font-size: 14px;
   transition: all 0.2s ease;
   outline: none;
+  min-height: 40px;
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+    font-size: var(--font-size-sm);
+    min-height: 44px;
+    border-radius: var(--radius-md);
+  }
   
   &::placeholder {
     color: var(--text-tertiary);
@@ -84,6 +92,13 @@ const StyledTextArea = styled.textarea<TextAreaProps>`
   resize: vertical;
   min-height: 80px;
   
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+    font-size: var(--font-size-sm);
+    min-height: 70px;
+    border-radius: var(--radius-md);
+  }
+  
   &::placeholder {
     color: var(--text-tertiary);
   }
@@ -135,6 +150,14 @@ const StyledSelect = styled.select<SelectProps>`
   transition: all 0.2s ease;
   outline: none;
   cursor: pointer;
+  min-height: 40px;
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+    font-size: var(--font-size-sm);
+    min-height: 44px;
+    border-radius: var(--radius-md);
+  }
   
   &:hover {
     border-color: var(--gray-400);

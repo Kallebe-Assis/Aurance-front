@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import Sidebar from './Sidebar';
-import Header from './Header';
+import BottomNavbar from './BottomNavbar';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,13 +14,13 @@ const LayoutContainer = styled.div`
 
 const MainContent = styled.main`
   margin-left: 280px;
-  margin-top: 60px;
   padding: var(--spacing-md);
-  min-height: calc(100vh - 60px);
+  min-height: 100vh;
   
   @media (max-width: 768px) {
     margin-left: 0;
     padding: var(--spacing-sm);
+    padding-bottom: 80px; /* Espaço para a navbar inferior */
   }
 `;
 
@@ -55,11 +55,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <LayoutContainer>
       <Sidebar isOpen={sidebarOpen} onToggle={handleMenuToggle} />
-      <Header onMenuToggle={handleMenuToggle} />
       <Overlay isOpen={sidebarOpen} onClick={handleOverlayClick} />
       <MainContent>
         {children}
       </MainContent>
+      <BottomNavbar />
     </LayoutContainer>
   );
 };

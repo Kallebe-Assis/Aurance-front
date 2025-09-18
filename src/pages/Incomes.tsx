@@ -1,6 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import styled from 'styled-components';
-import { FiPlus, FiEye, FiEdit, FiTrash2, FiDollarSign } from 'react-icons/fi';
+import { 
+  FiPlus, FiEye, FiEdit, FiTrash2, FiDollarSign, FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp, FiFilter,
+  FiTag, FiHome, FiShoppingBag, FiTruck, FiCreditCard, FiTrendingUp, FiTrendingDown,
+  FiCoffee, FiShoppingCart, FiZap, FiWifi, FiPhone, FiMonitor, FiActivity, FiBook,
+  FiMusic, FiCamera, FiHeart, FiGift, FiBriefcase, FiUsers, FiUser, FiMail,
+  FiCalendar, FiClock, FiMapPin, FiGlobe, FiShield, FiSettings, FiTool,
+  FiSun, FiMoon, FiCloud, FiCloudRain, FiWind, FiThermometer, FiUmbrella, FiStar,
+  FiAward, FiTarget, FiFlag, FiLayers, FiGrid, FiBox, FiPackage,
+  FiNavigation, FiNavigation2, FiBarChart, FiPieChart, FiFileText, FiImage
+} from 'react-icons/fi';
+import { useSearchParams } from 'react-router-dom';
 import { incomeService } from '../services/incomes';
 import { Income, FirebaseDateType, FirebaseTimestamp, FirebaseDate } from '../types';
 import Button from '../components/common/Button';
@@ -8,6 +18,72 @@ import { Input, Select, TextArea } from '../components/common/Input';
 import { GlobalLoading } from '../components/GlobalLoading';
 import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
+
+// Lista de ícones disponíveis para categorias
+const AVAILABLE_ICONS = [
+  { name: 'tag', component: FiTag },
+  { name: 'home', component: FiHome },
+  { name: 'shopping-bag', component: FiShoppingBag },
+  { name: 'truck', component: FiTruck },
+  { name: 'credit-card', component: FiCreditCard },
+  { name: 'dollar-sign', component: FiDollarSign },
+  { name: 'trending-up', component: FiTrendingUp },
+  { name: 'trending-down', component: FiTrendingDown },
+  { name: 'coffee', component: FiCoffee },
+  { name: 'shopping-cart', component: FiShoppingCart },
+  { name: 'zap', component: FiZap },
+  { name: 'wifi', component: FiWifi },
+  { name: 'phone', component: FiPhone },
+  { name: 'monitor', component: FiMonitor },
+  { name: 'activity', component: FiActivity },
+  { name: 'book', component: FiBook },
+  { name: 'music', component: FiMusic },
+  { name: 'camera', component: FiCamera },
+  { name: 'heart', component: FiHeart },
+  { name: 'gift', component: FiGift },
+  { name: 'briefcase', component: FiBriefcase },
+  { name: 'users', component: FiUsers },
+  { name: 'user', component: FiUser },
+  { name: 'mail', component: FiMail },
+  { name: 'calendar', component: FiCalendar },
+  { name: 'clock', component: FiClock },
+  { name: 'map-pin', component: FiMapPin },
+  { name: 'globe', component: FiGlobe },
+  { name: 'shield', component: FiShield },
+  { name: 'settings', component: FiSettings },
+  { name: 'tool', component: FiTool },
+  { name: 'sun', component: FiSun },
+  { name: 'moon', component: FiMoon },
+  { name: 'cloud', component: FiCloud },
+  { name: 'cloud-rain', component: FiCloudRain },
+  { name: 'wind', component: FiWind },
+  { name: 'thermometer', component: FiThermometer },
+  { name: 'umbrella', component: FiUmbrella },
+  { name: 'star', component: FiStar },
+  { name: 'award', component: FiAward },
+  { name: 'target', component: FiTarget },
+  { name: 'flag', component: FiFlag },
+  { name: 'layers', component: FiLayers },
+  { name: 'grid', component: FiGrid },
+  { name: 'box', component: FiBox },
+  { name: 'package', component: FiPackage },
+  { name: 'navigation', component: FiNavigation },
+  { name: 'navigation2', component: FiNavigation2 },
+  { name: 'bar-chart', component: FiBarChart },
+  { name: 'pie-chart', component: FiPieChart },
+  { name: 'file-text', component: FiFileText },
+  { name: 'image', component: FiImage }
+];
+
+// Função para renderizar o ícone selecionado
+const renderIcon = (iconName: string, size: number = 18) => {
+  const iconData = AVAILABLE_ICONS.find(icon => icon.name === iconName);
+  if (iconData) {
+    const IconComponent = iconData.component;
+    return <IconComponent size={size} />;
+  }
+  return <FiTag size={size} />; // Fallback para tag
+};
 
 // Função utilitária para converter datas do Firebase
 const convertFirebaseDate = (date: FirebaseDateType): Date => {
@@ -44,6 +120,11 @@ const IncomesContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+  
+  @media (max-width: 768px) {
+    gap: var(--spacing-mobile-lg);
+    padding: var(--spacing-mobile-md);
+  }
 `;
 
 const Header = styled.div`
@@ -52,6 +133,12 @@ const Header = styled.div`
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-mobile-md);
+  }
 `;
 
 const Title = styled.h1`
@@ -62,6 +149,16 @@ const Actions = styled.div`
   display: flex;
   gap: var(--spacing-md);
   flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: var(--spacing-mobile-sm);
+    justify-content: stretch;
+    
+    button {
+      flex: 1;
+      min-width: 0;
+    }
+  }
 `;
 
 const FiltersSection = styled.div`
@@ -70,6 +167,11 @@ const FiltersSection = styled.div`
   padding: var(--spacing-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--gray-200);
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+    border-radius: var(--radius-md);
+  }
 `;
 
 const FiltersHeader = styled.div`
@@ -79,12 +181,6 @@ const FiltersHeader = styled.div`
   margin-bottom: var(--spacing-lg);
 `;
 
-const FiltersTitle = styled.h3`
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-`;
 
 const FiltersGrid = styled.div`
   display: grid;
@@ -116,6 +212,10 @@ const ListTitle = styled.h3`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const TableHeader = styled.thead`
@@ -232,6 +332,15 @@ const ModalContent = styled.div`
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: var(--shadow-xl);
+  
+  @media (max-width: 768px) {
+    width: 95%;
+    max-width: none;
+    max-height: 95vh;
+    padding: var(--spacing-mobile-lg);
+    border-radius: var(--radius-md);
+    margin: var(--spacing-mobile-md);
+  }
 `;
 
 const ModalHeader = styled.div`
@@ -281,23 +390,48 @@ const FormActions = styled.div`
   gap: var(--spacing-md);
   justify-content: flex-end;
   margin-top: var(--spacing-lg);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: var(--spacing-mobile-sm);
+  }
 `;
 
 const DashboardSection = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-mobile-sm);
+    margin-bottom: var(--spacing-mobile-lg);
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-mobile-sm);
+  }
 `;
 
 const DashboardCard = styled.div`
   background: linear-gradient(135deg, var(--white) 0%, var(--gray-50) 100%);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-md);
-  padding: var(--spacing-md);
+  padding: var(--spacing-xs);
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   text-align: center;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-xs);
+    min-height: 60px;
+  }
   
   &:hover {
     transform: translateY(-1px);
@@ -306,16 +440,22 @@ const DashboardCard = styled.div`
 `;
 
 const DashboardTitle = styled.h3`
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: 0.75rem;
+  margin: 0 0 2px 0;
+  font-size: 0.55rem;
   color: var(--text-secondary);
   font-weight: 500;
+  line-height: 1.1;
+  
+  @media (max-width: 768px) {
+    font-size: 0.5rem;
+    margin: 0 0 1px 0;
+  }
 `;
 
 const DashboardValue = styled.div<{ variant: string }>`
-  font-size: 1.25rem;
+  font-size: 0.95rem;
   font-weight: bold;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: 2px;
   color: ${({ variant }) => {
     switch (variant) {
       case 'success': return 'var(--success-color)';
@@ -324,6 +464,12 @@ const DashboardValue = styled.div<{ variant: string }>`
       default: return 'var(--text-primary)';
     }
   }};
+  line-height: 1.1;
+  
+  @media (max-width: 768px) {
+    font-size: 0.85rem;
+    margin-bottom: 1px;
+  }
 `;
 
 const DashboardSubtitle = styled.div`
@@ -337,12 +483,23 @@ const FiltersRow = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-mobile-sm);
+    margin-bottom: var(--spacing-mobile-md);
+  }
 `;
 
 const FiltersRow2 = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-mobile-sm);
+  }
 `;
 
 const ClearFiltersButton = styled.button`
@@ -361,7 +518,233 @@ const ClearFiltersButton = styled.button`
   }
 `;
 
+// Navegação por mês
+const MonthNavigation = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--white);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+`;
+
+const NavigationButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--gray-100);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--gray-200);
+    color: var(--text-primary);
+  }
+`;
+
+const MonthDisplay = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+`;
+
+const FiltersToggle = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 14px;
+  transition: color 0.2s ease;
+  
+  &:hover {
+    color: var(--text-primary);
+  }
+`;
+
+const FiltersTitle = styled.span`
+  font-weight: 500;
+`;
+
+const FiltersContent = styled.div<{ isOpen: boolean }>`
+  display: ${props => props.isOpen ? 'block' : 'none'};
+  margin-top: 12px;
+`;
+
+// Cards Mobile Compactos
+const MobileIncomeCard = styled.div`
+  display: none;
+  
+  @media (max-width: 768px) {
+    display: block;
+    background: var(--white);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray-100);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+  }
+`;
+
+const MobileCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+`;
+
+const MobileCardInfo = styled.div`
+  flex: 1;
+  margin-right: 32px; /* Espaço para o menu de três pontos */
+`;
+
+const MobileCardIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: var(--gray-100);
+  margin-right: 12px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+`;
+
+const MobileCardTitle = styled.h4`
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  margin-right: 12px;
+  line-height: 1.2;
+`;
+
+const MobileCardCategory = styled.span`
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 2px;
+`;
+
+const MobileCardDate = styled.span`
+  font-size: 11px;
+  color: var(--text-secondary);
+`;
+
+const MobileCardRight = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-right: 8px;
+`;
+
+const MobileCardAmount = styled.span`
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--success-color);
+`;
+
+const MobileCardStatus = styled.span<{ isReceived: boolean }>`
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  font-weight: 500;
+  display: inline-block;
+  margin-top: 2px;
+  background-color: ${props => props.isReceived ? '#dcfce7' : '#fee2e2'};
+  color: ${props => props.isReceived ? '#166534' : '#dc2626'};
+`;
+
+const MobileCardMenu = styled.div`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+`;
+
+const MobileMenuButton = styled.button`
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: var(--gray-100);
+    color: var(--text-primary);
+  }
+`;
+
+const MobileMenuDropdown = styled.div<{ isOpen: boolean }>`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 120px;
+  display: ${props => props.isOpen ? 'block' : 'none'};
+`;
+
+const MobileMenuItem = styled.button`
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: var(--gray-100);
+  }
+  
+  &:first-child {
+    border-radius: 8px 8px 0 0;
+  }
+  
+  &:last-child {
+    border-radius: 0 0 8px 8px;
+  }
+`;
+
+
 const Incomes: React.FC = () => {
+  const [searchParams] = useSearchParams();
   // Usar dados do contexto global
   const { 
     incomes, 
@@ -411,6 +794,34 @@ const Incomes: React.FC = () => {
     isReceived: '',
     selectedMonth: ''
   });
+
+  // Estados para navegação por mês e menu
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Abrir modal automaticamente se o parâmetro openModal estiver presente
+  useEffect(() => {
+    if (searchParams.get('openModal') === 'true') {
+      setIsModalOpen(true);
+      // Remover o parâmetro da URL
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('openModal');
+      window.history.replaceState({}, '', `${window.location.pathname}?${newSearchParams.toString()}`);
+    }
+  }, [searchParams]);
+
+  // Fechar menu quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setOpenMenuId(null);
+    };
+
+    if (openMenuId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openMenuId]);
 
   // Filtrar categorias para mostrar apenas categorias de receitas
   const incomeCategories = useMemo(() => {
@@ -707,6 +1118,66 @@ const Incomes: React.FC = () => {
       isReceived: '',
       selectedMonth: ''
     });
+    setCurrentMonth(new Date());
+  };
+
+  // Funções para navegação de mês
+  const formatMonthYear = (date: Date) => {
+    return new Intl.DateTimeFormat('pt-BR', { 
+      month: 'long', 
+      year: 'numeric' 
+    }).format(date);
+  };
+
+  const goToPreviousMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setCurrentMonth(newDate);
+    
+    // Atualizar o filtro de mês automaticamente
+    const monthString = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
+    setFilters(prev => ({ ...prev, selectedMonth: monthString }));
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(currentMonth);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setCurrentMonth(newDate);
+    
+    // Atualizar o filtro de mês automaticamente
+    const monthString = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
+    setFilters(prev => ({ ...prev, selectedMonth: monthString }));
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentMonth(today);
+    
+    // Definir o mês atual no filtro
+    const monthString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    setFilters(prev => ({ ...prev, selectedMonth: monthString }));
+  };
+
+  const toggleMenu = (incomeId: string) => {
+    setOpenMenuId(openMenuId === incomeId ? null : incomeId);
+  };
+
+  const closeMenu = () => {
+    setOpenMenuId(null);
+  };
+
+  const getCategoryName = (categoryId: string) => {
+    if (!categoryId) return 'Sem categoria';
+    
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : 'Categoria não encontrada';
+  };
+
+  const getCategoryIcon = (categoryId: string) => {
+    if (!categoryId) return renderIcon('tag');
+    
+    const category = categories.find(cat => cat.id === categoryId);
+    return renderIcon(category?.icon || 'tag');
   };
 
   // Função para obter nome da subcategoria
@@ -773,6 +1244,24 @@ const Incomes: React.FC = () => {
         </Button>
       </Header>
 
+      {/* Navegação por mês */}
+      <MonthNavigation>
+        <NavigationButton onClick={goToPreviousMonth}>
+          <FiChevronLeft />
+        </NavigationButton>
+        
+        <MonthDisplay>
+          <span>{formatMonthYear(currentMonth)}</span>
+          <NavigationButton onClick={goToToday}>
+            Hoje
+          </NavigationButton>
+        </MonthDisplay>
+        
+        <NavigationButton onClick={goToNextMonth}>
+          <FiChevronRight />
+        </NavigationButton>
+      </MonthNavigation>
+
       <DashboardSection>
         <DashboardCard>
           <DashboardTitle>Total de Receitas</DashboardTitle>
@@ -800,87 +1289,86 @@ const Incomes: React.FC = () => {
       </DashboardSection>
 
       <FiltersSection>
-        <FiltersHeader>
-          <h3>Filtros</h3>
-          <ClearFiltersButton 
-            type="button" 
-            onClick={clearFilters}
-          >
-            Limpar Filtros
-          </ClearFiltersButton>
-        </FiltersHeader>
-         
-        <FiltersRow>
-          <Select
-            value={filters.categoryId}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFilterChange('categoryId', e.target.value)}
-            fullWidth
-          >
-            <option value="">Todas as categorias</option>
-            {incomeCategories.map((category: any) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </Select>
-          
-          <Select
-            value={filters.isReceived}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFilterChange('isReceived', e.target.value)}
-            fullWidth
-          >
-            <option value="">Todos os status</option>
-            <option value="received">Recebido</option>
-            <option value="partial">Recebido Parcial</option>
-            <option value="pending">Pendente</option>
-          </Select>
+        <FiltersToggle onClick={() => setIsFiltersOpen(!isFiltersOpen)}>
+          <FiFilter />
+          <FiltersTitle>Filtros</FiltersTitle>
+          {isFiltersOpen ? <FiChevronUp /> : <FiChevronDown />}
+        </FiltersToggle>
+        
+        <FiltersContent isOpen={isFiltersOpen}>
+          <FiltersRow>
+            <Select
+              value={filters.categoryId}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFilterChange('categoryId', e.target.value)}
+              fullWidth
+            >
+              <option value="">Todas as categorias</option>
+              {incomeCategories.map((category: any) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </Select>
+            
+            <Select
+              value={filters.isReceived}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleFilterChange('isReceived', e.target.value)}
+              fullWidth
+            >
+              <option value="">Todos os status</option>
+              <option value="received">Recebido</option>
+              <option value="partial">Recebido Parcial</option>
+              <option value="pending">Pendente</option>
+            </Select>
+          </FiltersRow>
            
-          <Input
-            type="number"
-            placeholder="Valor mínimo"
-            value={filters.minAmount}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('minAmount', e.target.value)}
-            fullWidth
-            step="0.01"
-            min="0"
-          />
+          <FiltersRow2>
+            <Input
+              type="number"
+              placeholder="Valor mínimo"
+              value={filters.minAmount}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('minAmount', e.target.value)}
+              fullWidth
+              step="0.01"
+              min="0"
+            />
+            
+            <Input
+              type="number"
+              placeholder="Valor máximo"
+              value={filters.maxAmount}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('maxAmount', e.target.value)}
+              fullWidth
+              step="0.01"
+              min="0"
+            />
+            
+            <Input
+              type="date"
+              placeholder="Data de recebimento"
+              value={filters.dueDate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('dueDate', e.target.value)}
+              fullWidth
+            />
+            
+            <Input
+              type="text"
+              placeholder="Pesquisar receitas..."
+              value={filters.description}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('description', e.target.value)}
+              fullWidth
+            />
+          </FiltersRow2>
           
-          <Input
-            type="number"
-            placeholder="Valor máximo"
-            value={filters.maxAmount}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('maxAmount', e.target.value)}
-            fullWidth
-            step="0.01"
-            min="0"
-          />
-        </FiltersRow>
-         
-        <FiltersRow2>
-          <Input
-            type="date"
-            placeholder="Data de recebimento"
-            value={filters.dueDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('dueDate', e.target.value)}
-            fullWidth
-          />
-          
-          <Input
-            type="month"
-            placeholder="Filtrar por mês"
-            value={filters.selectedMonth}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('selectedMonth', e.target.value)}
-            fullWidth
-          />
-          
-          <Input
-            type="text"
-            placeholder="Pesquisar receitas..."
-            value={filters.description}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('description', e.target.value)}
-            fullWidth
-          />
-        </FiltersRow2>
+          <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+            <ClearFiltersButton 
+              type="button" 
+              onClick={clearFilters}
+            >
+              Limpar Filtros
+            </ClearFiltersButton>
+          </div>
+        </FiltersContent>
       </FiltersSection>
 
       <IncomesList>
@@ -993,6 +1481,68 @@ const Incomes: React.FC = () => {
             </tbody>
           </Table>
         )}
+        
+        {/* Cards Mobile */}
+        <div className="mobile-only">
+          {filteredIncomes.map((income: any) => (
+            <MobileIncomeCard 
+              key={income.id}
+              onClick={() => handleViewIncome(income)}
+            >
+              <MobileCardHeader>
+                <MobileCardIcon>
+                  {getCategoryIcon(income.categoryId)}
+                </MobileCardIcon>
+                <MobileCardInfo>
+                  <MobileCardTitle>{income.description}</MobileCardTitle>
+                  <MobileCardCategory>{getCategoryName(income.categoryId)}</MobileCardCategory>
+                  <MobileCardDate>{formatDate(income.receivedDate || income.dueDate)}</MobileCardDate>
+                </MobileCardInfo>
+                <MobileCardRight>
+                  <MobileCardAmount>{formatCurrency(income.amount)}</MobileCardAmount>
+                  <MobileCardStatus isReceived={income.isReceived || false}>
+                    {income.isPartial ? 'Parcial' : 
+                     income.isReceived ? 'Recebido' : 'Pendente'}
+                  </MobileCardStatus>
+                </MobileCardRight>
+              </MobileCardHeader>
+              
+              <MobileCardMenu>
+                <MobileMenuButton 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleMenu(income.id);
+                  }}
+                >
+                  ⋮
+                </MobileMenuButton>
+                <MobileMenuDropdown isOpen={openMenuId === income.id}>
+                  <MobileMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditIncome(income);
+                      closeMenu();
+                    }}
+                  >
+                    <FiEdit style={{ marginRight: '8px' }} />
+                    Editar
+                  </MobileMenuItem>
+                  <MobileMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteIncome(income);
+                      closeMenu();
+                    }}
+                    style={{ color: 'var(--error-color)' }}
+                  >
+                    <FiTrash2 style={{ marginRight: '8px' }} />
+                    Excluir
+                  </MobileMenuItem>
+                </MobileMenuDropdown>
+              </MobileCardMenu>
+            </MobileIncomeCard>
+          ))}
+        </div>
       </IncomesList>
 
              <Modal isOpen={isModalOpen}>

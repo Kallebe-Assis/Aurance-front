@@ -32,6 +32,10 @@ const Container = styled.div`
   margin: 0 auto;
   background-color: var(--gray-200);
   min-height: 100vh;
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+  }
 `;
 
 // Cabeçalho com título e botão
@@ -40,6 +44,13 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-mobile-md);
+    margin-bottom: var(--spacing-mobile-lg);
+  }
 `;
 
 const Title = styled.h1`
@@ -57,6 +68,13 @@ const HeaderButtons = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: var(--spacing-mobile-sm);
+    width: 100%;
+  }
 `;
 
 // Botão de recalcular
@@ -73,10 +91,16 @@ const RecalculateButton = styled.button`
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem 0.75rem;
+    font-size: var(--font-size-xs);
   }
 `;
 
@@ -86,6 +110,10 @@ const PeriodSelector = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  
+  @media (max-width: 768px) {
+    flex: 1;
+  }
 `;
 
 const PeriodLabel = styled.span`
@@ -195,6 +223,12 @@ const MainGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-mobile-md);
+    margin-bottom: var(--spacing-mobile-lg);
+  }
 `;
 
 // Card principal (maior)
@@ -975,6 +1009,7 @@ export default function Dashboard() {
       setShowRecalculateResultModal(true);
     }
   };
+
 
   // ========================================
   // RENDERIZAÇÃO DO DASHBOARD

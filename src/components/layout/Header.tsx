@@ -52,7 +52,7 @@ const MenuButton = styled.button`
   }
   
   @media (max-width: 768px) {
-    display: flex;
+    display: none;
   }
 `;
 

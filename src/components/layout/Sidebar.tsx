@@ -33,7 +33,7 @@ const SidebarContainer = styled.aside<{ isOpen: boolean }>`
   box-shadow: var(--shadow-lg);
   
   @media (max-width: 768px) {
-    transform: translateX(${({ isOpen }) => isOpen ? '0' : '-100%'});
+    display: none;
   }
 `;
 
@@ -49,7 +49,7 @@ const Overlay = styled.div<{ isOpen: boolean }>`
   visibility: ${({ isOpen }) => isOpen ? 'visible' : 'hidden'};
   transition: all var(--transition-normal);
   
-  @media (min-width: 769px) {
+  @media (max-width: 768px) {
     display: none;
   }
 `;

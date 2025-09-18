@@ -13,6 +13,11 @@ const BankAccountsContainer = styled.div`
   flex-direction: column;
   gap: var(--spacing-lg);
   padding: var(--spacing-lg);
+  
+  @media (max-width: 768px) {
+    gap: var(--spacing-mobile-lg);
+    padding: var(--spacing-mobile-md);
+  }
 `;
 
 const Header = styled.div`
@@ -21,6 +26,12 @@ const Header = styled.div`
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-mobile-md);
+  }
 `;
 
 const Title = styled.h1`
@@ -39,6 +50,12 @@ const StatsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-mobile-md);
+    margin-bottom: var(--spacing-mobile-lg);
+  }
 `;
 
 const StatCard = styled.div`
