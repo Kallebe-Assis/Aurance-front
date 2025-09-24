@@ -8,6 +8,7 @@ import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
 import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
+import { formatDateToLocal, getTodayString, parseLocalDate, parseLocalDateFlexible } from '../utils/dateUtils';
 
 const CreditCardsContainer = styled.div`
   display: flex;
@@ -1215,7 +1216,7 @@ const CreditCards: React.FC = () => {
   const [expenseFormData, setExpenseFormData] = useState({
     description: '',
     amount: '',
-    dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+    dueDate: getTodayString(), // Data atual como padrão
     categoryId: '',
     subcategoryId: '',
     tags: '',
@@ -1436,8 +1437,13 @@ const CreditCards: React.FC = () => {
     
     try {
       const dateObj = date && typeof date === 'object' && '_seconds' in date 
-        ? new Date(date._seconds * 1000)
-        : new Date(date as string | Date);
+        ? (() => {
+            const firebaseDate = new Date(date._seconds * 1000);
+            // Converter para timezone local usando parseLocalDateFlexible
+            const localDateString = firebaseDate.toISOString().split('T')[0]; // Pega apenas YYYY-MM-DD
+            return parseLocalDateFlexible(localDateString);
+          })()
+        : parseLocalDateFlexible(date as string | Date);
       
       return isNaN(dateObj.getTime()) ? '-' : dateObj.toLocaleDateString('pt-BR');
     } catch (error: any) {
@@ -1657,7 +1663,7 @@ const CreditCards: React.FC = () => {
     setExpenseFormData({
       description: '',
       amount: '',
-      dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+      dueDate: getTodayString(), // Data atual como padrão
       categoryId: '',
       subcategoryId: '',
       tags: '',
@@ -1690,13 +1696,13 @@ const CreditCards: React.FC = () => {
       const expenseData = {
         description: expenseFormData.description,
         amount: parseFloat(expenseFormData.amount),
-        dueDate: new Date(expenseFormData.dueDate),
+        dueDate: parseLocalDate(expenseFormData.dueDate),
         categoryId: expenseFormData.categoryId,
         subcategoryId: expenseFormData.subcategoryId || '',
         tags: expenseFormData.tags ? expenseFormData.tags.split(',').map(tag => tag.trim()) : [],
         observations: expenseFormData.observations,
         isPaid: true, // Sempre true para cartão de crédito
-        paidDate: new Date(expenseFormData.dueDate), // Usar a data de pagamento como paidDate
+        paidDate: parseLocalDate(expenseFormData.dueDate), // Usar a data de pagamento como paidDate
         isCreditCard: true,
         creditCardId: selectedCardForExpense.id,
         isInstallment: Boolean(expenseFormData.isInstallment),
@@ -1722,7 +1728,7 @@ const CreditCards: React.FC = () => {
           // Criar múltiplas despesas para parcelamento
           console.log('➕ Criando despesa parcelada...');
           
-          const baseDate = new Date(expenseFormData.dueDate);
+          const baseDate = parseLocalDate(expenseFormData.dueDate);
           const installmentAmount = totalAmount / installments;
           const createdExpenses = [];
           const closingDay = selectedCardForExpense.closingDate || 1;
@@ -1805,11 +1811,14 @@ const CreditCards: React.FC = () => {
       try {
         // Se for um objeto do Firebase (tem _seconds)
         if (date && typeof date === 'object' && '_seconds' in date && typeof date._seconds === 'number') {
-          dateObj = new Date(date._seconds * 1000);
+          const firebaseDate = new Date(date._seconds * 1000);
+          // Converter para timezone local usando parseLocalDateFlexible
+          const localDateString = firebaseDate.toISOString().split('T')[0]; // Pega apenas YYYY-MM-DD
+          dateObj = parseLocalDateFlexible(localDateString);
         }
         // Se for uma string
         else if (typeof date === 'string') {
-          dateObj = new Date(date);
+          dateObj = parseLocalDateFlexible(date);
         }
         // Se já for uma instância de Date
         else if (date instanceof Date) {
@@ -1825,7 +1834,7 @@ const CreditCards: React.FC = () => {
           return '';
         }
         
-        return dateObj.toISOString().split('T')[0];
+        return formatDateToLocal(dateObj);
       } catch (error: any) {
         console.error('Erro ao formatar data para input:', error, date);
         return '';
@@ -1927,13 +1936,13 @@ const CreditCards: React.FC = () => {
       const paymentExpense = {
         description: paymentFormData.description,
         amount: paymentAmount,
-        dueDate: new Date().toISOString().split('T')[0],
+        dueDate: getTodayString(),
         categoryId: '', // Categoria vazia para pagamentos
         subcategoryId: '',
         tags: ['pagamento', 'fatura'],
         observations: `Pagamento da fatura do cartão ${selectedCardForPayment.name}`,
         isPaid: true,
-        paidDate: new Date().toISOString().split('T')[0],
+        paidDate: getTodayString(),
         isCreditCard: false, // IMPORTANTE: false indica que é pagamento, não despesa de cartão
         bankAccountId: paymentFormData.bankAccountId
       };
@@ -2144,7 +2153,7 @@ const CreditCards: React.FC = () => {
                         setExpenseFormData({
                           description: '',
                           amount: '',
-                          dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+                          dueDate: getTodayString(), // Data atual como padrão
                           categoryId: '',
                           subcategoryId: '',
                           tags: '',

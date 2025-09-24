@@ -6,6 +6,7 @@ import { Expense, Income, FirebaseDateType, FirebaseTimestamp, FirebaseDate } fr
 import Button from '../components/common/Button';
 import { GlobalLoading } from '../components/GlobalLoading';
 import toast from 'react-hot-toast';
+import { parseLocalDate, parseLocalDateFlexible } from '../utils/dateUtils';
 
 // Função utilitária para converter datas do Firebase
 const convertFirebaseDate = (date: FirebaseDateType): Date => {
@@ -16,7 +17,10 @@ const convertFirebaseDate = (date: FirebaseDateType): Date => {
   // Se for um objeto do Firebase com _seconds
   if (typeof date === 'object' && '_seconds' in date) {
     const timestamp = date as FirebaseTimestamp;
-    return new Date(timestamp._seconds * 1000);
+    const dateObj = new Date(timestamp._seconds * 1000);
+    // Converter para timezone local usando parseLocalDateFlexible
+    const localDateString = dateObj.toISOString().split('T')[0]; // Pega apenas YYYY-MM-DD
+    return parseLocalDateFlexible(localDateString);
   }
   
   // Se for um objeto do Firebase com toDate()
@@ -27,7 +31,7 @@ const convertFirebaseDate = (date: FirebaseDateType): Date => {
   
   // Se for uma string
   if (typeof date === 'string') {
-    return new Date(date);
+    return parseLocalDateFlexible(date);
   }
   
   // Se já for uma instância de Date
@@ -440,7 +444,7 @@ const Calendar: React.FC = () => {
     const year = date.getFullYear();
     
     const expensesForDate = expenses.filter(expense => {
-      const expenseDate = new Date(expense.dueDate);
+      const expenseDate = parseLocalDateFlexible(expense.dueDate);
       return expenseDate.getDate() === day && 
              expenseDate.getMonth() === month && 
              expenseDate.getFullYear() === year;
@@ -674,7 +678,7 @@ const Calendar: React.FC = () => {
                       </div>
                     </EventTitle>
                     <EventDetails>
-                      Vencimento: {formatDate(new Date(expense.dueDate))}
+                      Vencimento: {formatDate(parseLocalDateFlexible(expense.dueDate))}
                       {expense.observations && ` • ${expense.observations}`}
                     </EventDetails>
                   </EventItem>

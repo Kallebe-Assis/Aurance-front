@@ -560,4 +560,17 @@ export const GlobalStyles = createGlobalStyle`
       -webkit-overflow-scrolling: touch;
     }
   }
+
+  /* Animação do spinner */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Forçar ocultação da navegação inferior no desktop */
+  @media (min-width: 769px) {
+    nav[class*="BottomNavbarContainer"] {
+      display: none !important;
+    }
+  }
 `;

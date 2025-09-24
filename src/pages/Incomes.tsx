@@ -18,6 +18,7 @@ import { Input, Select, TextArea } from '../components/common/Input';
 import { GlobalLoading } from '../components/GlobalLoading';
 import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
+import { formatDateToLocal, getTodayString, parseLocalDateFlexible } from '../utils/dateUtils';
 
 // Lista de ícones disponíveis para categorias
 const AVAILABLE_ICONS = [
@@ -94,7 +95,10 @@ const convertFirebaseDate = (date: FirebaseDateType): Date => {
   // Se for um objeto do Firebase com _seconds
   if (typeof date === 'object' && '_seconds' in date) {
     const timestamp = date as FirebaseTimestamp;
-    return new Date(timestamp._seconds * 1000);
+    const dateObj = new Date(timestamp._seconds * 1000);
+    // Converter para timezone local usando parseLocalDateFlexible
+    const localDateString = dateObj.toISOString().split('T')[0]; // Pega apenas YYYY-MM-DD
+    return parseLocalDateFlexible(localDateString);
   }
   
   // Se for um objeto do Firebase com toDate()
@@ -105,7 +109,7 @@ const convertFirebaseDate = (date: FirebaseDateType): Date => {
   
   // Se for uma string
   if (typeof date === 'string') {
-    return new Date(date);
+    return parseLocalDateFlexible(date);
   }
   
   // Se já for uma instância de Date
@@ -164,12 +168,11 @@ const Actions = styled.div`
 const FiltersSection = styled.div`
   background-color: var(--white);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--gray-200);
+  overflow: hidden;
   
   @media (max-width: 768px) {
-    padding: var(--spacing-mobile-md);
     border-radius: var(--radius-md);
   }
 `;
@@ -522,65 +525,99 @@ const ClearFiltersButton = styled.button`
 const MonthNavigation = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: var(--white);
+  justify-content: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: white;
   border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+    gap: var(--spacing-mobile-md);
+    margin-bottom: var(--spacing-mobile-lg);
+  }
 `;
 
-const NavigationButton = styled.button`
+const NavigationButton = styled.button<{ isLoading?: boolean; disabled?: boolean }>`
+  background: none;
+  border: none;
+  padding: var(--spacing-sm);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 8px;
-  background: var(--gray-100);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  opacity: ${({ disabled }) => disabled ? 0.5 : 1};
   
-  &:hover {
-    background: var(--gray-200);
+  &:hover:not(:disabled) {
+    background: var(--gray-100);
     color: var(--text-primary);
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
   }
 `;
 
 const MonthDisplay = styled.div`
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 150px;
+  text-align: center;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    min-width: 120px;
+  }
+`;
+
+const FiltersToggle = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  background: var(--gray-50);
+  border: none;
+  border-bottom: 1px solid var(--gray-200);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--gray-100);
+  }
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+  }
+`;
+
+const FiltersTitle = styled.h3`
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
 `;
 
-const FiltersToggle = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 8px 0;
-  font-size: 14px;
-  transition: color 0.2s ease;
-  
-  &:hover {
-    color: var(--text-primary);
-  }
-`;
-
-const FiltersTitle = styled.span`
-  font-weight: 500;
-`;
-
 const FiltersContent = styled.div<{ isOpen: boolean }>`
   display: ${props => props.isOpen ? 'block' : 'none'};
-  margin-top: 12px;
+  padding: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-mobile-md);
+  }
 `;
 
 // Cards Mobile Compactos
@@ -774,7 +811,7 @@ const Incomes: React.FC = () => {
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
-    receivedDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+    receivedDate: getTodayString(), // Data atual como padrão
     categoryId: '',
     subcategoryId: '',
     tags: '',
@@ -782,6 +819,13 @@ const Incomes: React.FC = () => {
     isReceived: false,
     bankAccountId: ''
   });
+
+  // Definir o mês atual automaticamente quando a página carrega
+  useEffect(() => {
+    const today = new Date();
+    const monthString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    setFilters(prev => ({ ...prev, selectedMonth: monthString }));
+  }, []);
 
   // Estados para filtros
   const [filters, setFilters] = useState({
@@ -884,17 +928,26 @@ const Incomes: React.FC = () => {
   };
 
   const formatDate = (date: FirebaseDateType | null | undefined) => {
-    if (!date) return '-';
+    console.log('🔍 DEBUG Incomes formatDate - Input:', date, 'Type:', typeof date);
+    
+    if (!date) {
+      console.log('🔍 DEBUG Incomes formatDate - Data é null/undefined, retornando "-"');
+      return '-';
+    }
     
     try {
       const dateObj = convertFirebaseDate(date);
+      console.log('🔍 DEBUG Incomes formatDate - dateObj criado:', dateObj);
       
       // Verificar se a data é válida
       if (isNaN(dateObj.getTime())) {
+        console.log('🔍 DEBUG Incomes formatDate - Data inválida, retornando "-"');
         return '-';
       }
       
-      return dateObj.toLocaleDateString('pt-BR');
+      const result = dateObj.toLocaleDateString('pt-BR');
+      console.log('🔍 DEBUG Incomes formatDate - Resultado final:', result);
+      return result;
     } catch (error) {
       console.error('Erro ao formatar data no Incomes:', error, date);
       return '-';
@@ -912,7 +965,7 @@ const Incomes: React.FC = () => {
     setFormData({
       description: '',
       amount: '',
-      receivedDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+      receivedDate: getTodayString(), // Data atual como padrão
       categoryId: '',
       subcategoryId: '',
       tags: '',
@@ -926,18 +979,10 @@ const Incomes: React.FC = () => {
     e.preventDefault();
     
     try {
-      // Ajustar as datas para o fuso horário local
-      const adjustDateForTimezone = (dateString: string) => {
-        if (!dateString) return dateString;
-        const date = new Date(dateString);
-        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-        return new Date(date.getTime() + userTimezoneOffset).toISOString().split('T')[0];
-      };
-
-             const incomeData = {
+      const incomeData = {
          description: formData.description,
          amount: parseFloat(formData.amount),
-         receivedDate: adjustDateForTimezone(formData.receivedDate),
+         receivedDate: formData.receivedDate, // Usar data diretamente
          categoryId: formData.categoryId,
          subcategoryId: formData.subcategoryId || '',
          tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
@@ -987,7 +1032,7 @@ const Incomes: React.FC = () => {
           return '';
         }
         
-        return dateObj.toISOString().split('T')[0];
+        return formatDateToLocal(dateObj);
       } catch (error) {
         console.error('Erro ao formatar data para input:', error, date);
         return '';
@@ -1043,9 +1088,12 @@ const Incomes: React.FC = () => {
     // Calcular o valor padrão (valor restante)
     const remainingAmount = income.amount - (income.partialAmount || 0);
     
+    const today = new Date();
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
     setPaymentData({
       amount: remainingAmount.toString(), // Valor integral restante como padrão
-      receivedDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+      receivedDate: todayString, // Data atual como padrão
       isPartial: false
     });
     setIsPaymentModalOpen(true);
@@ -1065,16 +1113,9 @@ const Incomes: React.FC = () => {
         return;
       }
       
-      const adjustDateForTimezone = (dateString: string) => {
-        if (!dateString) return dateString;
-        const date = new Date(dateString);
-        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-        return new Date(date.getTime() + userTimezoneOffset).toISOString().split('T')[0];
-      };
-      
       const paymentInfo = {
         amount: paymentAmount,
-        receivedDate: adjustDateForTimezone(paymentData.receivedDate),
+        receivedDate: paymentData.receivedDate, // Usar data diretamente
         isPartial: paymentData.isPartial
       };
       
@@ -1251,14 +1292,15 @@ const Incomes: React.FC = () => {
         </NavigationButton>
         
         <MonthDisplay>
-          <span>{formatMonthYear(currentMonth)}</span>
-          <NavigationButton onClick={goToToday}>
-            Hoje
-          </NavigationButton>
+          {formatMonthYear(currentMonth)}
         </MonthDisplay>
         
         <NavigationButton onClick={goToNextMonth}>
           <FiChevronRight />
+        </NavigationButton>
+        
+        <NavigationButton onClick={goToToday}>
+          Hoje
         </NavigationButton>
       </MonthNavigation>
 
@@ -1393,7 +1435,7 @@ const Incomes: React.FC = () => {
                  <TableHeaderCellCenter>Ações</TableHeaderCellCenter>
                </TableRow>
             </TableHeader>
-            <tbody>npm 
+            <tbody>
               {filteredIncomes.map((income: any) => (
                 <TableRow key={income.id}>
                                     <TableCell>
@@ -1426,7 +1468,12 @@ const Incomes: React.FC = () => {
                          )}
                        </div>
                      </TableCellCenter>
-                                         <TableCellCenter>{formatDate(income.receivedDate)}</TableCellCenter>
+                                         <TableCellCenter>
+                                           {(() => {
+                                             console.log('🔍 DEBUG Incomes - receivedDate específico:', income.receivedDate, 'Type:', typeof income.receivedDate);
+                                             return formatDate(income.receivedDate);
+                                           })()}
+                                         </TableCellCenter>
                                                                               <TableCellStatus>
                                               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-xs)', alignItems: 'center' }}>
                                                    <StatusBadge isReceived={income.isReceived} isPartial={income.isPartial}>

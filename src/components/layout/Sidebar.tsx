@@ -11,8 +11,10 @@ import {
   FiSettings,
   FiMenu,
   FiX,
-  FiRepeat
+  FiRepeat,
+  FiLogOut
 } from 'react-icons/fi';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -228,6 +230,29 @@ const UserRole = styled.div`
   text-transform: capitalize;
 `;
 
+const LogoutButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: var(--error-color);
+    background: var(--gray-100);
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
 const navigationItems = [
   { path: '/', icon: FiHome, label: 'Dashboard' },
   { path: '/expenses', icon: FiDollarSign, label: 'Despesas' },
@@ -241,6 +266,8 @@ const navigationItems = [
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
+  const { user, logout } = useAuth();
+  
   return (
     <>
       <Overlay isOpen={isOpen} onClick={onToggle} />
@@ -278,11 +305,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
       <SidebarFooter>
         <UserInfo>
-          <UserAvatar>U</UserAvatar>
+          <UserAvatar>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</UserAvatar>
           <UserDetails>
-            <UserName>Usuário</UserName>
-            <UserRole>user</UserRole>
+            <UserName>{user?.name || 'Usuário'}</UserName>
           </UserDetails>
+          <LogoutButton onClick={logout} title="Sair">
+            <FiLogOut />
+          </LogoutButton>
         </UserInfo>
       </SidebarFooter>
     </SidebarContainer>

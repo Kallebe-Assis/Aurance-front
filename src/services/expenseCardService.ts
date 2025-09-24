@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ExpenseCard } from '../types';
+import { formatDateToLocalISO } from '../utils/dateUtils';
 
 const API_URL = 'https://aurance-back-end.vercel.app/api/expenses-cards';
 
@@ -70,7 +71,7 @@ export const expenseCardService = {
   // Atualizar métricas de todos os cartões
   async updateMetrics(selectedMonth?: Date): Promise<void> {
     try {
-      const data = selectedMonth ? { selectedMonth: selectedMonth.toISOString() } : {};
+      const data = selectedMonth ? { selectedMonth: formatDateToLocalISO(selectedMonth) } : {};
       await axios.post(`${API_URL}/update-metrics`, data, {
         headers: getAuthHeaders()
       });
@@ -85,7 +86,7 @@ export const expenseCardService = {
     try {
       const data = {
         creditCardId,
-        selectedMonth: selectedMonth ? selectedMonth.toISOString() : null,
+        selectedMonth: selectedMonth ? formatDateToLocalISO(selectedMonth) : null,
         paymentAmount
       };
       const response = await axios.post(`${API_URL}/pay-bill`, data, {

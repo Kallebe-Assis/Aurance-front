@@ -23,11 +23,11 @@ const BottomNavbarContainer = styled.nav`
   background: var(--white);
   border-top: 1px solid var(--gray-200);
   z-index: 1000;
-  display: none;
+  display: none !important;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   
   @media (max-width: 768px) {
-    display: flex;
+    display: flex !important;
   }
 `;
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Sidebar from './Sidebar';
 import BottomNavbar from './BottomNavbar';
@@ -43,6 +43,18 @@ const Overlay = styled.div<{ isOpen: boolean }>`
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const handleMenuToggle = () => {
     setSidebarOpen(!sidebarOpen);
@@ -59,7 +71,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <MainContent>
         {children}
       </MainContent>
-      <BottomNavbar />
+      {isMobile && <BottomNavbar />}
     </LayoutContainer>
   );
 };

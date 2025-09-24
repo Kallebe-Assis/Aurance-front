@@ -31,7 +31,26 @@ const PageLoading: React.FC = () => (
     height: '100vh',
     backgroundColor: 'var(--gray-200)'
   }}>
-    <InitialLoading />
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '1rem'
+    }}>
+      <div style={{
+        width: '40px',
+        height: '40px',
+        border: '4px solid var(--gray-300)',
+        borderTop: '4px solid var(--primary-color)',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      <p style={{
+        color: 'var(--text-secondary)',
+        fontSize: '14px',
+        margin: 0
+      }}>Carregando...</p>
+    </div>
   </div>
 );
 

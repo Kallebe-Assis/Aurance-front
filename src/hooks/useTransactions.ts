@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Transaction } from '../types';
+import { formatDateToLocalISO } from '../utils/dateUtils';
 
 /**
  * HOOK UNIFICADO PARA TRANSAÇÕES
@@ -225,7 +226,7 @@ export const useTransactions = (options: UseTransactionsOptions = {}): UseTransa
     try {
       setError(null);
       
-      const body = selectedMonth ? { selectedMonth: selectedMonth.toISOString() } : {};
+      const body = selectedMonth ? { selectedMonth: formatDateToLocalISO(selectedMonth) } : {};
       
       const response = await fetch('/api/transactions/update-metrics', {
         method: 'POST',

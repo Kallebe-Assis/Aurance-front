@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTransactions } from '../hooks/useTransactions';
 import { Transaction, Category, CreditCard, BankAccount } from '../types';
+import { formatDateToLocal, formatDateToLocalISO, parseLocalDate, parseLocalDateFlexible } from '../utils/dateUtils';
 
 interface TransactionFormProps {
   transaction?: Transaction;
@@ -175,7 +176,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         type: transaction.type || type,
         description: transaction.description || '',
         amount: transaction.amount?.toString() || '',
-        dueDate: transaction.dueDate ? new Date(transaction.dueDate).toISOString().split('T')[0] : '',
+        dueDate: transaction.dueDate ? formatDateToLocal(parseLocalDateFlexible(transaction.dueDate)) : '',
         categoryId: transaction.categoryId || '',
         subcategoryId: transaction.subcategoryId || '',
         isCreditCard: transaction.isCreditCard || false,
@@ -243,7 +244,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         type: formData.type as 'expense' | 'income' | 'creditCard',
         description: formData.description.trim(),
         amount: parseFloat(formData.amount),
-        dueDate: new Date(formData.dueDate).toISOString(),
+        dueDate: formatDateToLocalISO(parseLocalDate(formData.dueDate)),
         categoryId: formData.categoryId || undefined,
         subcategoryId: formData.subcategoryId || undefined,
         isCreditCard: formData.isCreditCard,

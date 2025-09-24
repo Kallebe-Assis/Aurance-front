@@ -18,6 +18,7 @@ import { Input, Select, TextArea } from '../components/common/Input';
 import { GlobalLoading } from '../components/GlobalLoading';
 import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
+import { formatDateToLocal, getTodayString, parseLocalDate, parseLocalDateFlexible } from '../utils/dateUtils';
 
 // Lista de ícones disponíveis para categorias
 const AVAILABLE_ICONS = [
@@ -998,7 +999,7 @@ const Expenses: React.FC = () => {
   const [formData, setFormData] = useState<ExpenseFormData>({
     description: '',
     amount: '',
-    dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+    dueDate: getTodayString(), // Data atual como padrão
     categoryId: '',
     subcategoryId: '',
     tags: '',
@@ -1010,9 +1011,22 @@ const Expenses: React.FC = () => {
     recurringMonths: '1'
   });
 
+  // Definir o mês atual automaticamente quando a página carrega
+  useEffect(() => {
+    const today = new Date();
+    const monthString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    setSelectedMonth(monthString);
+  }, []);
+
   // Filtrar despesas para excluir despesas de cartão de crédito
   const filteredExpenses = useMemo(() => {
-    return expenses.filter(expense => !expense.isCreditCard && !expense.creditCardId);
+    const filtered = expenses.filter(expense => !expense.isCreditCard && !expense.creditCardId);
+    console.log('🔍 DEBUG Expenses - Despesas filtradas:', filtered.length);
+    console.log('🔍 DEBUG Expenses - Primeira despesa (se houver):', filtered[0]);
+    if (filtered[0]) {
+      console.log('🔍 DEBUG Expenses - dueDate da primeira despesa:', filtered[0].dueDate, 'Type:', typeof filtered[0].dueDate);
+    }
+    return filtered;
   }, [expenses]);
 
   // Filtrar categorias para mostrar apenas categorias de despesas
@@ -1044,15 +1058,15 @@ const Expenses: React.FC = () => {
                            (!maxAmount || expense.amount <= parseFloat(maxAmount));
       
       const matchesDate = !dueDate || (() => {
-        const expenseDate = new Date(expense.dueDate);
-        const filterDate = new Date(dueDate);
+        const expenseDate = parseLocalDateFlexible(expense.dueDate);
+        const filterDate = parseLocalDate(dueDate);
         return expenseDate.getFullYear() === filterDate.getFullYear() &&
                expenseDate.getMonth() === filterDate.getMonth() &&
                expenseDate.getDate() === filterDate.getDate();
       })();
       
       const matchesMonth = !selectedMonth || (() => {
-        const expenseDate = new Date(expense.dueDate);
+        const expenseDate = parseLocalDateFlexible(expense.dueDate);
         const [year, month] = selectedMonth.split('-');
         return expenseDate.getFullYear() === parseInt(year) &&
                expenseDate.getMonth() === (parseInt(month) - 1); // getMonth() retorna 0-11
@@ -1087,34 +1101,51 @@ const Expenses: React.FC = () => {
   };
 
   const formatDate = (date: Date | string | { _seconds: number; _nanoseconds: number } | null | undefined) => {
-    if (!date) return '-';
+    console.log('🔍 DEBUG formatDate - Input:', date, 'Type:', typeof date);
+    
+    if (!date) {
+      console.log('🔍 DEBUG formatDate - Data é null/undefined, retornando "-"');
+      return '-';
+    }
     
     let dateObj: Date;
     
     try {
       // Se for um objeto do Firebase (tem _seconds)
       if (date && typeof date === 'object' && '_seconds' in date && typeof date._seconds === 'number') {
-        dateObj = new Date(date._seconds * 1000);
+        console.log('🔍 DEBUG formatDate - Firebase timestamp detectado');
+        const firebaseDate = new Date(date._seconds * 1000);
+        // Converter para timezone local usando parseLocalDateFlexible
+        const localDateString = firebaseDate.toISOString().split('T')[0]; // Pega apenas YYYY-MM-DD
+        dateObj = parseLocalDateFlexible(localDateString);
       }
       // Se for uma string
       else if (typeof date === 'string') {
-        dateObj = new Date(date);
+        console.log('🔍 DEBUG formatDate - String detectada, usando parseLocalDateFlexible');
+        dateObj = parseLocalDateFlexible(date);
       }
       // Se já for uma instância de Date
       else if (date instanceof Date) {
+        console.log('🔍 DEBUG formatDate - Date object detectado');
         dateObj = date;
       }
       // Fallback
       else {
+        console.log('🔍 DEBUG formatDate - Fallback, retornando "-"');
         return '-';
       }
+      
+      console.log('🔍 DEBUG formatDate - dateObj criado:', dateObj);
       
       // Verificar se a data é válida
       if (isNaN(dateObj.getTime())) {
+        console.log('🔍 DEBUG formatDate - Data inválida, retornando "-"');
         return '-';
       }
       
-    return dateObj.toLocaleDateString('pt-BR');
+      const result = dateObj.toLocaleDateString('pt-BR');
+      console.log('🔍 DEBUG formatDate - Resultado final:', result);
+      return result;
     } catch (error) {
       console.error('Erro ao formatar data:', error, date);
       return '-';
@@ -1143,27 +1174,39 @@ const Expenses: React.FC = () => {
     e.preventDefault();
     
     try {
-      // Ajustar as datas para o fuso horário local
-      const adjustDateForTimezone = (dateString: string) => {
-        if (!dateString) return dateString;
-        const date = new Date(dateString);
-        const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-        return new Date(date.getTime() + userTimezoneOffset).toISOString().split('T')[0];
-      };
-
-
-
+      // Debug: Verificar exatamente o que está sendo enviado
+      console.log('🔍 DEBUG Frontend - Data do formulário:', formData.dueDate);
+      console.log('🔍 DEBUG Frontend - Tipo da data:', typeof formData.dueDate);
+      console.log('🔍 DEBUG Frontend - Data atual do sistema:', new Date().toLocaleDateString());
+      console.log('🔍 DEBUG Frontend - Data atual ISO:', new Date().toISOString());
+      
+      // Teste: Criar uma data de teste
+      const testDate = new Date();
+      console.log('🔍 DEBUG Frontend - Teste Date():', testDate);
+      console.log('🔍 DEBUG Frontend - Teste toLocaleDateString():', testDate.toLocaleDateString());
+      console.log('🔍 DEBUG Frontend - Teste getTodayString():', getTodayString());
+      
+      // Teste: Converter a data do formulário para Date
+      if (formData.dueDate) {
+        const formDate = parseLocalDate(formData.dueDate);
+        const formDateLocal = parseLocalDate(formData.dueDate);
+        console.log('🔍 DEBUG Frontend - FormData como Date (UTC):', formDate);
+        console.log('🔍 DEBUG Frontend - FormData toLocaleDateString (UTC):', formDate.toLocaleDateString());
+        console.log('🔍 DEBUG Frontend - FormData como Date (Local):', formDateLocal);
+        console.log('🔍 DEBUG Frontend - FormData toLocaleDateString (Local):', formDateLocal.toLocaleDateString());
+      }
+      
       // 🚫 VERIFICAÇÃO DE SEGURANÇA: Garantir que NUNCA seja criada despesa de cartão pela tela de despesas
       const expenseData = {
         description: formData.description,
         amount: parseFloat(formData.amount),
-        dueDate: adjustDateForTimezone(formData.dueDate),
+        dueDate: formData.dueDate, // Usar data diretamente sem conversões complexas
         categoryId: formData.categoryId,
         subcategoryId: formData.subcategoryId || '',
         tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
         observations: formData.observations,
         isPaid: Boolean(formData.isPaid),
-        paidDate: formData.isPaid ? adjustDateForTimezone(formData.paymentDate) : null,
+        paidDate: formData.isPaid ? formData.paymentDate : null, // Usar data diretamente
         bankAccountId: formData.bankAccountId && formData.bankAccountId !== '' ? formData.bankAccountId : null,
         // 🚫 GARANTIR que despesas criadas pela tela de despesas NUNCA sejam de cartão
         isCreditCard: false,
@@ -1215,7 +1258,7 @@ const Expenses: React.FC = () => {
     setFormData({
       description: '',
       amount: '',
-      dueDate: new Date().toISOString().split('T')[0], // Data atual como padrão
+      dueDate: getTodayString(), // Data atual como padrão
       categoryId: '',
       subcategoryId: '',
       tags: '',
@@ -1258,13 +1301,16 @@ const Expenses: React.FC = () => {
        let dateObj: Date;
        
        try {
-         // Se for um objeto do Firebase (tem _seconds)
-         if (date && typeof date === 'object' && '_seconds' in date && typeof date._seconds === 'number') {
-           dateObj = new Date(date._seconds * 1000);
-         }
+      // Se for um objeto do Firebase (tem _seconds)
+      if (date && typeof date === 'object' && '_seconds' in date && typeof date._seconds === 'number') {
+        const firebaseDate = new Date(date._seconds * 1000);
+        // Converter para timezone local usando parseLocalDateFlexible
+        const localDateString = firebaseDate.toISOString().split('T')[0]; // Pega apenas YYYY-MM-DD
+        dateObj = parseLocalDateFlexible(localDateString);
+      }
          // Se for uma string
          else if (typeof date === 'string') {
-           dateObj = new Date(date);
+           dateObj = parseLocalDateFlexible(date);
          }
          // Se já for uma instância de Date
          else if (date instanceof Date) {
@@ -1280,7 +1326,7 @@ const Expenses: React.FC = () => {
            return '';
          }
          
-         return dateObj.toISOString().split('T')[0];
+         return formatDateToLocal(dateObj);
        } catch (error) {
          console.error('Erro ao formatar data para input:', error, date);
          return '';
@@ -1335,8 +1381,11 @@ const Expenses: React.FC = () => {
     // Se já tem pagamento parcial, calcular o valor restante
     const remainingAmount = expense.isPartial ? (expense.amount - (expense.partialAmount || 0)) : expense.amount;
     
+    const today = new Date();
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
     setPaymentData({
-      paymentDate: new Date().toISOString().split('T')[0],
+      paymentDate: todayString,
       paymentType: remainingAmount === expense.amount ? 'full' : 'partial',
       partialAmount: remainingAmount === expense.amount ? '' : remainingAmount.toString()
     });
